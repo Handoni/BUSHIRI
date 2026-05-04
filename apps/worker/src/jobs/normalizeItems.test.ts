@@ -1,0 +1,100 @@
+import { describe, expect, it } from 'vitest'
+import type { ParsedMarketItem } from '../types/llm'
+import { buildCompareKey, detectEventFlag, detectSoldOut, normalizeParsedItem, normalizeOrigin, parseWeightRange, resolveCanonicalName } from './normalizeItems'
+import { parsePricePerKg } from '../lib/price'
+
+const aliases = [
+  { alias: '제주광어', canonicalName: '광어' },
+  { alias: '황금광어', canonicalName: '광어' },
+  { alias: '흑점줄전갱이', canonicalName: '시마아지' },
+  { alias: '블루 킹크랩', canonicalName: '킹크랩' },
+  { alias: '마가단 대게', canonicalName: '대게' }
+]
+
+describe('parsePricePerKg', () => {
+  it('parses the documented price notation cases', () => {
+    expect(parsePricePerKg('kg 4.8', 'manwon')).toBe(48000)
+    expect(parsePricePerKg('18.000원', 'auto')).toBe(18000)
+    expect(parsePricePerKg('20.000원', 'auto')).toBe(20000)
+    expect(parsePricePerKg('20000', 'won')).toBe(20000)
+    expect(parsePricePerKg('kg 46,000원', 'auto')).toBe(46000)
+    expect(parsePricePerKg('‼️‼️‼️ 20.000원‼️‼️‼️', 'auto')).toBe(20000)
+  })
+})
+
+describe('parseWeightRange', () => {
+  it('parses the documented weight range cases', () => {
+    expect(parseWeightRange('2.2-2.5kg')).toEqual({ sizeMinKg: 2.2, sizeMaxKg: 2.5 })
+    expect(parseWeightRange('3~4k')).toEqual({ sizeMinKg: 3, sizeMaxKg: 4 })
+    expect(parseWeightRange('3k업')).toEqual({ sizeMinKg: 3, sizeMaxKg: null })
+    expect(parseWeightRange('700g~1.5k')).toEqual({ sizeMinKg: 0.7, sizeMaxKg: 1.5 })
+    expect(parseWeightRange('800g')).toEqual({ sizeMinKg: 0.8, sizeMaxKg: 0.8 })
+  })
+})
+
+describe('status and alias normalization', () => {
+  it('detects sold out lines and avoids false positives for 완도광어', () => {
+    expect(detectSoldOut('자연산참돔3kㅡ16000완')).toBe(true)
+    expect(detectSoldOut('완도광어3kㅡ31000')).toBe(false)
+    expect(detectSoldOut('❌마감')).toBe(true)
+    expect(detectSoldOut('🚫 표시 품절')).toBe(true)
+  })
+
+  it('resolves documented aliases', () => {
+    expect(resolveCanonicalName('제주광어', aliases)).toBe('광어')
+    expect(resolveCanonicalName('황금광어', aliases)).toBe('광어')
+    expect(resolveCanonicalName('흑점줄전갱이', aliases)).toBe('시마아지')
+    expect(resolveCanonicalName('블루 킹크랩', aliases)).toBe('킹크랩')
+    expect(resolveCanonicalName('마가단 대게', aliases)).toBe('대게')
+  })
+
+  it('normalizes origins and compare keys', () => {
+    expect(normalizeOrigin('제주')).toBe('국내산')
+    expect(normalizeOrigin('일본산')).toBe('일본산')
+    expect(detectEventFlag('황금광어 이벤트 특가')).toBe(true)
+    expect(
+      buildCompareKey({
+        canonicalName: '광어',
+        origin: '국내산',
+        productionType: '자연산',
+        freshnessState: null,
+        grade: null,
+        eventFlag: false,
+        sizeMinKg: 2,
+        sizeMaxKg: 3
+      })
+    ).toBe('광어|국내산|자연산|unknown|general|2~3kg')
+  })
+})
+
+describe('normalizeParsedItem', () => {
+  it('normalizes a parsed market item into a compare-ready item', () => {
+    const item: ParsedMarketItem = {
+      category: 'fish',
+      canonicalName: null,
+      displayName: '제주광어',
+      origin: '제주',
+      productionType: '자연산',
+      freshnessState: null,
+      grade: null,
+      sizeMinKg: 2,
+      sizeMaxKg: 3,
+      unit: 'kg',
+      pricePerKg: null,
+      priceText: 'kg 4.8',
+      soldOut: false,
+      eventFlag: true,
+      halfAvailable: false,
+      notes: null,
+      confidence: 0.9
+    }
+
+    expect(normalizeParsedItem(item, { priceNotation: 'manwon', vendorName: '성전물산', aliases })).toMatchObject({
+      canonicalName: '광어',
+      origin: '국내산',
+      pricePerKg: 48000,
+      eventFlag: true,
+      compareKey: '광어|국내산|자연산|unknown|event|2~3kg'
+    })
+  })
+})

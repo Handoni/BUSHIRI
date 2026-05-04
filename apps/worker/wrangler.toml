@@ -1,0 +1,19 @@
+name = "bushiri-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-24"
+
+[vars]
+LLM_PROVIDER = "pydantic_ai"
+LLM_MODEL = "gemma-3-27b-it"
+LLM_PIPELINE_URL = "http://127.0.0.1:8790/parse-market-post"
+APP_TIMEZONE = "Asia/Seoul"
+RAW_POST_RETENTION_DAYS = "30"
+COLLECT_LOOKBACK_HOURS = "30"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bushiri"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[triggers]
+crons = ["0 23 * * *"]

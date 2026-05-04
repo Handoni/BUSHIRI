@@ -1,0 +1,14 @@
+{
+  "name": "bushiri",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @bushiri/worker dev\" \"pnpm --filter @bushiri/web dev\"",
+    "test": "pnpm --filter @bushiri/worker test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
