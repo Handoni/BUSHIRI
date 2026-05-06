@@ -29,6 +29,7 @@ export type Env = {
   LLM_PIPELINE_URL?: string
   LLM_PIPELINE_TOKEN?: string
   DISCORD_WEBHOOK_URL?: string
+  CORS_ALLOWED_ORIGINS?: string
   LLM_PROVIDER: string
   LLM_MODEL: string
   APP_TIMEZONE: string
