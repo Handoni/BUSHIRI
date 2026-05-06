@@ -39,3 +39,17 @@ pnpm --filter @bushiri/worker d1:migrate:local
 ```bash
 pnpm --filter @bushiri/worker d1:migrate:remote
 ```
+
+## Cloudflare Pages API proxy
+
+The Vite app calls same-origin `/api/*` endpoints. In Cloudflare Pages, those requests
+must be handled by the Pages Function in `apps/web/functions/api/[[path]].js`; otherwise
+Pages serves the SPA `index.html` fallback for API URLs.
+
+Set a Pages runtime variable in production and preview:
+
+```bash
+BUSHIRI_API_ORIGIN=https://<deployed-worker-api-origin>
+```
+
+Use the Worker API origin, not the Pages origin.
