@@ -7,7 +7,8 @@
     "dev": "wrangler dev --local --port 8787",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "d1:migrate:local": "wrangler d1 migrations apply bushiri --local"
+    "d1:migrate:local": "wrangler d1 migrations apply bushiri --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply bushiri --remote"
   },
   "devDependencies": {
     "@types/node": "^24.0.1",

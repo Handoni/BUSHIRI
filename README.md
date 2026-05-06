@@ -33,3 +33,9 @@ Configure the Worker with `LLM_PROVIDER=pydantic_ai`, `LLM_MODEL=gemma-3-27b-it`
 ```bash
 pnpm --filter @bushiri/worker d1:migrate:local
 ```
+
+## Remote D1 migration
+
+```bash
+pnpm --filter @bushiri/worker d1:migrate:remote
+```

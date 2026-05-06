@@ -13,7 +13,7 @@ COLLECT_LOOKBACK_HOURS = "30"
 [[d1_databases]]
 binding = "DB"
 database_name = "bushiri"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "6aff5af0-5886-439d-b1f5-3af265cd1d01"
 
 [triggers]
 crons = ["0 23 * * *"]
