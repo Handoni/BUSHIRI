@@ -170,6 +170,72 @@ describe('trend comparison grouping', () => {
     expect(Object.keys(rows[0])).not.toContain('성전물산|제주산')
   })
 
+  it('normalizes overlapping origin labels into the shortest keyword', () => {
+    const comparison = buildTrendComparison([
+      point('jeju-1', {
+        date: '2026-05-01',
+        value: 31000,
+        raw: {
+          sourceName: '성전물산',
+          origin: '제주산',
+          freshnessState: '활어',
+        },
+      }),
+      point('jeju-2', {
+        date: '2026-05-01',
+        value: 29500,
+        raw: {
+          sourceName: '성전물산',
+          origin: '제주/국내산',
+          freshnessState: '활어',
+        },
+      }),
+      point('jeju-3', {
+        date: '2026-05-02',
+        value: 28000,
+        raw: {
+          sourceName: '성전물산',
+          origin: '제주',
+          freshnessState: '활어',
+        },
+      }),
+      point('jeju-4', {
+        date: '2026-05-02',
+        value: 27500,
+        raw: {
+          sourceName: '성전물산',
+          origin: '제주산/국내산',
+          freshnessState: '활어',
+        },
+      }),
+      point('wando', {
+        date: '2026-05-01',
+        value: 26000,
+        raw: {
+          sourceName: '성전물산',
+          origin: '완도산/국내산',
+          freshnessState: '활어',
+        },
+      }),
+    ])
+
+    expect(comparison.series.map((series) => series.key)).toEqual([
+      '성전물산|완도',
+      '성전물산|제주',
+    ])
+    expect(comparison.series.find((series) => series.origin === '제주')?.points).toEqual([
+      { date: '2026-05-01', label: '05-01', value: 29500 },
+      { date: '2026-05-02', label: '05-02', value: 27500 },
+    ])
+    expect(comparison.rows.map((row) => row.origin)).toEqual([
+      '제주',
+      '제주',
+      '완도',
+      '제주',
+      '제주',
+    ])
+  })
+
   it('keeps status in rows without using status or weight in comparison keys', () => {
     expect(
       resolveTrendCondition(
@@ -206,6 +272,22 @@ describe('trend comparison grouping', () => {
       origin: '원산지 미상',
       status: '상태 미상',
       key: '윤호수산|원산지 미상',
+    })
+
+    expect(
+      resolveTrendCondition(
+        point('busan', {
+          value: 12000,
+          raw: {
+            sourceName: '윤호수산',
+            origin: '부산',
+            freshnessState: '활어',
+          },
+        }),
+      ),
+    ).toMatchObject({
+      origin: '부산',
+      key: '윤호수산|부산',
     })
   })
 
@@ -272,7 +354,9 @@ describe('trend species options', () => {
       },
     ])
 
-    expect(filterSpeciesOptions(options, '레드').map((option) => option.value)).toEqual(['킹크랩'])
+    expect(filterSpeciesOptions(options, '레드').map((option) => option.value)).toEqual([
+      '킹크랩',
+    ])
     expect(filterSpeciesOptions(options, '')).toHaveLength(3)
   })
 })

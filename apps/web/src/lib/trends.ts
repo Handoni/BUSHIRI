@@ -65,6 +65,16 @@ export type TrendChartRow = {
   label: string
 } & Record<string, string | number>
 
+const UNKNOWN_ORIGIN_LABEL = '원산지 미상'
+const ORIGIN_SEGMENT_SEPARATOR = /[\/,·ㆍ+&|]+/u
+const GENERIC_ORIGIN_KEYWORDS = new Set([
+  '국내산',
+  '국내',
+  '수입산',
+  '수입',
+  '원산지미상',
+])
+
 function isRecord(value: unknown): value is RawRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -111,6 +121,118 @@ function pushUnique(values: string[], value: string | null) {
   }
 
   values.push(value)
+}
+
+function compactOriginText(value: string): string {
+  return value.trim().replace(/\s+/g, '')
+}
+
+function isGenericOriginKeyword(value: string): boolean {
+  return GENERIC_ORIGIN_KEYWORDS.has(compactOriginText(value))
+}
+
+function normalizeOriginToken(value: string): string | null {
+  const trimmed = value.trim()
+  const compacted = compactOriginText(trimmed)
+
+  if (!compacted) {
+    return null
+  }
+
+  if (compacted === compactOriginText(UNKNOWN_ORIGIN_LABEL)) {
+    return UNKNOWN_ORIGIN_LABEL
+  }
+
+  if (isGenericOriginKeyword(compacted) || !compacted.endsWith('산') || compacted.length <= 2) {
+    return isGenericOriginKeyword(compacted) ? compacted : trimmed
+  }
+
+  const withoutSuffix = compacted.slice(0, -1)
+
+  return withoutSuffix || compacted
+}
+
+function splitOriginSegments(origin: string): string[] {
+  return origin.split(ORIGIN_SEGMENT_SEPARATOR).flatMap((segment) => {
+    const words = segment.trim().split(/\s+/u).filter(Boolean)
+
+    if (words.length > 1 && words.some((word) => isGenericOriginKeyword(word))) {
+      return words
+    }
+
+    return [segment]
+  })
+}
+
+function normalizeOriginLabel(origin: string | null): string {
+  if (!origin) {
+    return UNKNOWN_ORIGIN_LABEL
+  }
+
+  const compacted = compactOriginText(origin)
+
+  if (!compacted) {
+    return UNKNOWN_ORIGIN_LABEL
+  }
+
+  if (compacted === compactOriginText(UNKNOWN_ORIGIN_LABEL)) {
+    return UNKNOWN_ORIGIN_LABEL
+  }
+
+  const tokens = splitOriginSegments(origin)
+    .map(normalizeOriginToken)
+    .filter((value): value is string => value !== null)
+  const uniqueTokens = Array.from(new Set(tokens))
+  const specificTokens = uniqueTokens.filter((token) => !isGenericOriginKeyword(token))
+
+  if (specificTokens.length === 1) {
+    return specificTokens[0]
+  }
+
+  if (specificTokens.length > 1) {
+    return specificTokens.sort(compareKorean).join('/')
+  }
+
+  return uniqueTokens[0] ?? UNKNOWN_ORIGIN_LABEL
+}
+
+function compareOriginCanonical(left: string, right: string): number {
+  const lengthOrder = left.length - right.length
+
+  return lengthOrder === 0 ? compareKorean(left, right) : lengthOrder
+}
+
+function shouldMergeOriginLabels(left: string, right: string): boolean {
+  if (
+    left === right ||
+    left.includes('/') ||
+    right.includes('/') ||
+    isGenericOriginKeyword(left) ||
+    isGenericOriginKeyword(right)
+  ) {
+    return false
+  }
+
+  return left.includes(right) || right.includes(left)
+}
+
+function buildOriginAliasMap(origins: string[]): Map<string, string> {
+  const normalizedEntries = origins.map((origin) => [origin, normalizeOriginLabel(origin)] as const)
+  const normalizedLabels = Array.from(new Set(normalizedEntries.map((entry) => entry[1])))
+  const canonicalByLabel = new Map<string, string>()
+
+  normalizedLabels.forEach((label) => {
+    const candidates = normalizedLabels.filter((candidate) =>
+      shouldMergeOriginLabels(label, candidate),
+    )
+    const canonical = [label, ...candidates].sort(compareOriginCanonical)[0] ?? label
+
+    canonicalByLabel.set(label, canonical)
+  })
+
+  return new Map(
+    normalizedEntries.map(([origin, label]) => [origin, canonicalByLabel.get(label) ?? label]),
+  )
 }
 
 function normalizeFreshness(value: unknown): string | null {
@@ -167,7 +289,10 @@ export function resolveTrendStatus(raw: unknown): string {
   const record = isRecord(raw) ? raw : {}
   const tags: string[] = []
 
-  pushUnique(tags, normalizeFreshness(getRawCandidate(record, ['freshnessState', 'freshness_state'])))
+  pushUnique(
+    tags,
+    normalizeFreshness(getRawCandidate(record, ['freshnessState', 'freshness_state'])),
+  )
   descriptorStatus(record).forEach((tag) => pushUnique(tags, tag))
 
   return tags.length > 0 ? tags.join('·') : '상태 미상'
@@ -226,16 +351,29 @@ function pushReferenceBadge(
 
 export function buildTrendReferenceBadges(raw: unknown): TrendReferenceBadge[] {
   const record = isRecord(raw) ? raw : {}
-  const origin = stringValue(getRawCandidate(record, ['origin'])) ?? '원산지 미상'
+  const rawOrigin = stringValue(getRawCandidate(record, ['origin']))
+  const origin = normalizeOriginLabel(rawOrigin)
   const status = resolveTrendStatus(record)
-  const excludedLabels = new Set([origin, status, '활어', '선어'])
+  const excludedLabels = new Set(
+    [origin, rawOrigin, status, '활어', '선어'].filter(
+      (label): label is string => label !== null,
+    ),
+  )
   const badges: TrendReferenceBadge[] = []
   const weightBucket = resolveWeightBucket(record)
 
   pushReferenceBadge(
     badges,
     'displayName',
-    stringValue(getRawCandidate(record, ['displayName', 'display_name', 'speciesName', 'commonName', 'name'])),
+    stringValue(
+      getRawCandidate(record, [
+        'displayName',
+        'display_name',
+        'speciesName',
+        'commonName',
+        'name',
+      ]),
+    ),
     excludedLabels,
   )
   pushReferenceBadge(
@@ -244,7 +382,12 @@ export function buildTrendReferenceBadges(raw: unknown): TrendReferenceBadge[] {
     stringValue(getRawCandidate(record, ['productionType', 'production_type'])),
     excludedLabels,
   )
-  pushReferenceBadge(badges, 'grade', stringValue(getRawCandidate(record, ['grade'])), excludedLabels)
+  pushReferenceBadge(
+    badges,
+    'grade',
+    stringValue(getRawCandidate(record, ['grade'])),
+    excludedLabels,
+  )
   pushReferenceBadge(
     badges,
     'weight',
@@ -285,14 +428,18 @@ export function buildTrendReferenceBadges(raw: unknown): TrendReferenceBadge[] {
   return badges
 }
 
-export function resolveTrendCondition(point: SpeciesTrendPoint): TrendCondition {
+export function resolveTrendCondition(
+  point: SpeciesTrendPoint,
+  originAliases: Map<string, string> = new Map(),
+): TrendCondition {
   const raw = isRecord(point.raw) ? point.raw : {}
   const vendor =
     stringValue(getRawCandidate(raw, ['sourceName', 'source_name', 'vendorName', 'vendor_name'])) ??
     point.market ??
     '판매처 미상'
   const status = resolveTrendStatus(raw)
-  const origin = stringValue(getRawCandidate(raw, ['origin'])) ?? '원산지 미상'
+  const rawOrigin = stringValue(getRawCandidate(raw, ['origin']))
+  const origin = (rawOrigin && originAliases.get(rawOrigin)) ?? normalizeOriginLabel(rawOrigin)
   const key = `${vendor}|${origin}`
 
   return {
@@ -365,6 +512,13 @@ export function pickDefaultSpecies(options: SpeciesOption[]): string {
 
 export function buildTrendComparison(points: SpeciesTrendPoint[]): TrendComparison {
   const currency = points[0]?.currency ?? 'KRW'
+  const originAliases = buildOriginAliasMap(
+    points
+      .map((point) =>
+        isRecord(point.raw) ? stringValue(getRawCandidate(point.raw, ['origin'])) : null,
+      )
+      .filter((origin): origin is string => origin !== null),
+  )
   const seriesMap = new Map<
     string,
     TrendCondition & {
@@ -373,7 +527,7 @@ export function buildTrendComparison(points: SpeciesTrendPoint[]): TrendComparis
     }
   >()
   const rows = points.map((point, index) => {
-    const condition = resolveTrendCondition(point)
+    const condition = resolveTrendCondition(point, originAliases)
 
     return {
       ...condition,
@@ -389,7 +543,7 @@ export function buildTrendComparison(points: SpeciesTrendPoint[]): TrendComparis
       return
     }
 
-    const condition = resolveTrendCondition(point)
+    const condition = resolveTrendCondition(point, originAliases)
     const target =
       seriesMap.get(condition.key) ??
       {
