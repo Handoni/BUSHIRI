@@ -4,6 +4,7 @@ import {
   buildTodayBoard,
   getLowestVendorListing,
   type TodayBoardListing,
+  type TodayBoardRow,
   type TodayBoardSectionKey,
 } from '../lib/board'
 import {
@@ -114,6 +115,10 @@ function countryLabel(country: string) {
   return `${COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
 }
 
+function countryFlag(country: string | null) {
+  return country ? COUNTRY_FLAG_BY_NAME[country] ?? '•' : '•'
+}
+
 function badgeTone(tag: string) {
   if (tag === '품절') {
     return 'danger'
@@ -183,6 +188,45 @@ function awardBadges(listing: TodayBoardListing) {
         }
       : null,
   ].filter((badge): badge is { label: string; className: string } => badge !== null)
+}
+
+function SpeciesLabel({
+  row,
+  showCountryFlag,
+}: {
+  row: TodayBoardRow
+  showCountryFlag: boolean
+}) {
+  if (showCountryFlag) {
+    return (
+      <span className="grid min-w-0 grid-cols-[1.3rem_minmax(0,1fr)_auto] items-center gap-1.5 leading-tight lg:grid-cols-[1.45rem_minmax(0,1fr)_auto] lg:gap-2">
+        <span
+          aria-label={row.speciesCountryLabel ?? '국가 미상'}
+          className="text-base leading-none lg:text-lg"
+          title={row.speciesCountryLabel ?? '국가 미상'}
+        >
+          {countryFlag(row.speciesCountryLabel)}
+        </span>
+        <span className="min-w-0 text-[0.84rem] font-bold text-bushiri-ink [overflow-wrap:anywhere] lg:text-[0.98rem]">
+          {row.speciesLabel}
+        </span>
+        <span className="min-w-0 text-[0.7rem] font-extrabold text-bushiri-muted [overflow-wrap:anywhere] lg:text-[0.78rem]">
+          {row.speciesOriginLabel ? `(${row.speciesOriginLabel})` : ''}
+        </span>
+      </span>
+    )
+  }
+
+  return (
+    <strong className="block text-[0.84rem] font-bold leading-tight text-bushiri-ink [overflow-wrap:anywhere] lg:text-[0.98rem]">
+      <span className="block">{row.speciesLabel}</span>
+      {row.speciesOriginLabel ? (
+        <span className="mt-1 block text-[0.72rem] font-extrabold text-bushiri-muted lg:text-[0.8rem]">
+          ({row.speciesOriginLabel})
+        </span>
+      ) : null}
+    </strong>
+  )
 }
 
 function MarketListingCard({
@@ -353,6 +397,12 @@ export function TodayPage() {
     [activeSection, board.sections],
   )
   const visibleRows = visibleSections.flatMap((section) => section.rows)
+  const showSpeciesCountryFlag =
+    new Set(
+      visibleRows
+        .map((row) => row.speciesCountryLabel)
+        .filter((countryName): countryName is string => countryName !== null),
+    ).size > 1
 
   const activeSectionLabel = visibleSections[0]?.label ?? '회'
   const emptyState =
@@ -508,7 +558,7 @@ export function TodayPage() {
                   <div className="hidden min-w-0 max-h-[min(72dvh,760px)] overflow-y-auto overflow-x-hidden rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:block">
                     <table className="w-full table-fixed border-separate border-spacing-0 text-left">
                       <colgroup>
-                        <col className="w-[72px] lg:w-[92px]" />
+                        <col className={showSpeciesCountryFlag ? 'w-[150px] lg:w-[180px]' : 'w-[72px] lg:w-[92px]'} />
                         {section.vendorColumns.map((vendor) => (
                           <col key={vendor} />
                         ))}
@@ -534,14 +584,7 @@ export function TodayPage() {
                         {section.rows.map((row) => (
                           <tr key={row.key} className="align-top">
                             <th scope="row" className="border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted/90 p-2 align-middle last:border-b-0 lg:p-3">
-                              <strong className="block text-[0.84rem] font-bold leading-tight text-bushiri-ink [overflow-wrap:anywhere] lg:text-[0.98rem]">
-                                <span className="block">{row.speciesLabel}</span>
-                                {row.speciesOriginLabel ? (
-                                  <span className="mt-1 block text-[0.72rem] font-extrabold text-bushiri-muted lg:text-[0.8rem]">
-                                    ({row.speciesOriginLabel})
-                                  </span>
-                                ) : null}
-                              </strong>
+                              <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
                             </th>
                             {section.vendorColumns.map((vendor) => {
                               const listings = row.cells[vendor] ?? []
@@ -581,7 +624,15 @@ export function TodayPage() {
                   </div>
 
                   <div className="max-h-[min(72dvh,760px)] overflow-auto rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:hidden" aria-label={`${section.label} 어종별 최저가 시세판`}>
-                    <div className="sticky top-0 z-[2] grid grid-cols-[76px_minmax(0,1fr)] items-center gap-3 border-b border-bushiri-ink/15 bg-bushiri-surface-muted p-3 text-[0.76rem] font-extrabold text-bushiri-muted" aria-hidden="true">
+                    <div
+                      className={cn(
+                        'sticky top-0 z-[2] grid items-center gap-3 border-b border-bushiri-ink/15 bg-bushiri-surface-muted p-3 text-[0.76rem] font-extrabold text-bushiri-muted',
+                        showSpeciesCountryFlag
+                          ? 'grid-cols-[minmax(132px,0.48fr)_minmax(0,1fr)]'
+                          : 'grid-cols-[76px_minmax(0,1fr)]',
+                      )}
+                      aria-hidden="true"
+                    >
                       <span>어종</span>
                       <span>최저가 판매처</span>
                     </div>
@@ -600,20 +651,16 @@ export function TodayPage() {
                           <button
                             aria-expanded={isExpanded}
                             className={cn(
-                              'grid w-full grid-cols-[76px_minmax(0,1fr)] items-center gap-3 bg-bushiri-surface/90 p-3 text-left text-bushiri-ink transition hover:bg-white focus-visible:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bushiri-primary active:translate-y-px',
+                              'grid w-full items-center gap-3 bg-bushiri-surface/90 p-3 text-left text-bushiri-ink transition hover:bg-white focus-visible:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bushiri-primary active:translate-y-px',
+                              showSpeciesCountryFlag
+                                ? 'grid-cols-[minmax(132px,0.48fr)_minmax(0,1fr)]'
+                                : 'grid-cols-[76px_minmax(0,1fr)]',
                               isExpanded ? 'bg-white' : '',
                             )}
                             onClick={() => toggleSpecies(row.key)}
                             type="button"
                           >
-                            <span className="font-extrabold leading-tight [word-break:keep-all]">
-                              <span className="block">{row.speciesLabel}</span>
-                              {row.speciesOriginLabel ? (
-                                <span className="mt-1 block text-[0.72rem] text-bushiri-muted">
-                                  ({row.speciesOriginLabel})
-                                </span>
-                              ) : null}
-                            </span>
+                            <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
                             <span className="flex min-w-0 flex-wrap items-baseline gap-2">
                               {lowest ? (
                                 <>

@@ -14,6 +14,7 @@ export type TodayBoardRow = {
   key: string
   canonicalName: string
   speciesLabel: string
+  speciesCountryLabel: string | null
   speciesOriginLabel: string | null
   cells: Record<string, TodayBoardListing[]>
 }
@@ -400,6 +401,7 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
         key: `${sectionKey}-${rowKey}`,
         canonicalName: row.canonicalName,
         speciesLabel: row.canonicalName,
+        speciesCountryLabel: stringValue(raw.originCountry) ?? stringValue(raw.origin),
         speciesOriginLabel: stringValue(raw.originDetail),
         cells: {},
       })
