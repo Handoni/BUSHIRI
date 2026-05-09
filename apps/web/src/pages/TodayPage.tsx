@@ -31,6 +31,7 @@ import {
 
 const DEFAULT_BOARD_SECTION: TodayBoardSectionKey = 'fish'
 const BOARD_SECTION_KEYS: TodayBoardSectionKey[] = ['fish', 'crustacean']
+const NO_COUNTRY_SELECTION = '__country-none__'
 
 type TodayBoardUrlState = {
   sectionKey: TodayBoardSectionKey
@@ -240,19 +241,29 @@ function CountryMultiSelect({
   onChange: (values: string[]) => void
 }) {
   const orderedValues = options.map((option) => option.value)
+  const selectedCountryValues = selectedValues.filter((value) => orderedValues.includes(value))
+  const noneSelected = selectedValues.includes(NO_COUNTRY_SELECTION)
   const allSelected =
-    selectedValues.length === 0 || selectedValues.length === orderedValues.length
-  const selectedSet = new Set(selectedValues)
+    !noneSelected &&
+    (selectedCountryValues.length === 0 || selectedCountryValues.length === orderedValues.length)
+  const selectedSet = new Set(selectedCountryValues)
   const selectedLabel = allSelected
     ? '전체'
-    : selectedValues.length === 1
-      ? options.find((option) => option.value === selectedValues[0])?.label ?? selectedValues[0]
-      : `${selectedValues.length}개 국가`
+    : noneSelected || selectedCountryValues.length === 0
+      ? '선택 없음'
+      : selectedCountryValues.length === 1
+        ? options.find((option) => option.value === selectedCountryValues[0])?.label ?? selectedCountryValues[0]
+        : `${selectedCountryValues.length}개 국가`
 
   const updateSelected = (nextValues: string[]) => {
     const orderedNextValues = orderedValues.filter((value) => nextValues.includes(value))
 
-    onChange(orderedNextValues.length === orderedValues.length ? [] : orderedNextValues)
+    if (orderedNextValues.length === orderedValues.length) {
+      onChange([])
+      return
+    }
+
+    onChange(orderedNextValues.length === 0 ? [NO_COUNTRY_SELECTION] : orderedNextValues)
   }
 
   const toggleCountry = (country: string) => {
@@ -262,11 +273,11 @@ function CountryMultiSelect({
     }
 
     if (selectedSet.has(country)) {
-      updateSelected(selectedValues.filter((value) => value !== country))
+      updateSelected(selectedCountryValues.filter((value) => value !== country))
       return
     }
 
-    updateSelected([...selectedValues, country])
+    updateSelected([...selectedCountryValues, country])
   }
 
   return (
@@ -290,10 +301,10 @@ function CountryMultiSelect({
           <input
             checked={allSelected}
             className="h-4 w-4 accent-bushiri-primary"
-            onChange={() => onChange([])}
+            onChange={() => onChange(allSelected ? [NO_COUNTRY_SELECTION] : [])}
             type="checkbox"
           />
-          <span>전체 선택</span>
+          <span>{allSelected ? '전체 해제' : '전체 선택'}</span>
         </label>
         <div className="my-1 h-px bg-bushiri-line" />
         {options.map((option) => (
