@@ -16,6 +16,7 @@ import {
 } from './lib/router'
 import { RawPostsPage } from './pages/RawPostsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SpeciesInfoPage } from './pages/SpeciesInfoPage'
 import { TodayPage } from './pages/TodayPage'
 import { TrendsPage } from './pages/TrendsPage'
 
@@ -23,6 +24,8 @@ function renderRoute(route: AppRoute) {
   switch (route) {
     case '/today':
       return <TodayPage />
+    case '/species-info':
+      return <SpeciesInfoPage />
     case '/trends':
       return <TrendsPage />
     case '/raw-posts':

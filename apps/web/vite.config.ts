@@ -63,6 +63,10 @@ export default defineConfig(({ mode }) => {
               target: proxyTarget,
               changeOrigin: true,
             },
+            '/api/species-info': {
+              target: proxyTarget,
+              changeOrigin: true,
+            },
             '/api/sources/status': {
               target: proxyTarget,
               changeOrigin: true,

@@ -18,6 +18,7 @@ describe('admin route visibility', () => {
   it('hides raw review and source settings for non-admin users', () => {
     expect(getVisibleNavItems(viewerSession).map((item) => item.route)).toEqual([
       '/today',
+      '/species-info',
       '/trends',
     ])
   })
@@ -25,6 +26,7 @@ describe('admin route visibility', () => {
   it('includes raw review and source settings for admin users', () => {
     expect(getVisibleNavItems(adminSession).map((item) => item.route)).toEqual([
       '/today',
+      '/species-info',
       '/trends',
       '/raw-posts',
       '/settings',

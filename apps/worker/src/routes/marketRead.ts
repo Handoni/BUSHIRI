@@ -99,6 +99,48 @@ function mapInsightRow(row: Record<string, unknown>) {
   }
 }
 
+function parseInfoSources(value: unknown): string[] {
+  if (typeof value !== 'string') {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown
+
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      : []
+  } catch {
+    return []
+  }
+}
+
+function mapSpeciesProfileRow(row: Record<string, unknown>) {
+  return {
+    canonicalName: String(row.canonical_name),
+    category: String(row.category),
+    koreanName: String(row.korean_name),
+    scientificName: row.scientific_name === null ? null : String(row.scientific_name),
+    englishName: row.english_name === null ? null : String(row.english_name),
+    aliases: String(row.aliases)
+      .split(',')
+      .map((alias) => alias.trim())
+      .filter(Boolean),
+    seasonMonths: String(row.season_months),
+    seasonNote: String(row.season_note),
+    marketWeightNote: String(row.market_weight_note),
+    habitatNote: String(row.habitat_note),
+    tasteNote: String(row.taste_note),
+    buyingNote: String(row.buying_note),
+    photoUrl: String(row.photo_url),
+    photoSourceUrl: String(row.photo_source_url),
+    photoAttribution: String(row.photo_attribution),
+    photoLicense: String(row.photo_license),
+    infoSources: parseInfoSources(row.info_sources),
+    sortOrder: Number(row.sort_order)
+  }
+}
+
 function mapRawPostRow(row: Record<string, unknown>) {
   return {
     id: Number(row.id),
@@ -170,6 +212,38 @@ async function getInsights(db: D1DatabaseBinding, date: string) {
   return result.results.map(mapInsightRow)
 }
 
+async function getSpeciesProfiles(db: D1DatabaseBinding) {
+  const result = await db
+    .prepare(
+      `SELECT canonical_name, category, korean_name, scientific_name, english_name, aliases,
+              season_months, season_note, market_weight_note, habitat_note, taste_note, buying_note,
+              photo_url, photo_source_url, photo_attribution, photo_license, info_sources, sort_order
+       FROM species_profiles
+       WHERE category IN ('fish', 'salmon')
+       ORDER BY sort_order ASC, canonical_name ASC`
+    )
+    .all()
+
+  return result.results.map(mapSpeciesProfileRow)
+}
+
+async function getSpeciesProfile(db: D1DatabaseBinding, canonicalName: string) {
+  const normalizedName = canonicalName === '황금광어' ? '광어' : canonicalName
+  const result = await db
+    .prepare(
+      `SELECT canonical_name, category, korean_name, scientific_name, english_name, aliases,
+              season_months, season_note, market_weight_note, habitat_note, taste_note, buying_note,
+              photo_url, photo_source_url, photo_attribution, photo_license, info_sources, sort_order
+       FROM species_profiles
+       WHERE canonical_name = ?1
+       LIMIT 1`
+    )
+    .bind(normalizedName)
+    .first()
+
+  return result ? mapSpeciesProfileRow(result) : null
+}
+
 async function getRawPosts(db: D1DatabaseBinding) {
   const result = await db
     .prepare(
@@ -198,6 +272,20 @@ export async function handleMarketReadRequest(request: Request, env: Env | undef
     const canonicalName = decodeURIComponent(speciesMatch[1])
     const days = Number(url.searchParams.get('days') ?? '30')
     return json({ ok: true, items: await getSpeciesHistory(env.DB, canonicalName, days) })
+  }
+
+  if (url.pathname === '/api/species-info' && request.method === 'GET') {
+    return json({ ok: true, items: await getSpeciesProfiles(env.DB) })
+  }
+
+  const speciesInfoMatch = url.pathname.match(/^\/api\/species-info\/(.+)$/)
+  if (speciesInfoMatch && request.method === 'GET') {
+    const canonicalName = decodeURIComponent(speciesInfoMatch[1])
+    const profile = await getSpeciesProfile(env.DB, canonicalName)
+
+    return profile
+      ? json({ ok: true, item: profile })
+      : json({ ok: false, error: 'Species profile not found' }, 404)
   }
 
   if (url.pathname === '/api/insights' && request.method === 'GET') {

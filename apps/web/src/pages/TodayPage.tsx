@@ -7,13 +7,15 @@ import {
   type TodayBoardListing,
   type TodayBoardRow,
   type TodayBoardSectionKey,
+  UNKNOWN_ORIGIN_LABEL,
 } from '../lib/board'
 import {
-  formatCurrency,
+  formatKgManwonPrice,
   formatNumber,
   formatRelativeDateInput,
 } from '../lib/format'
 import { useResource } from '../hooks/useResource'
+import { navigateToSpeciesInfo } from './SpeciesInfoPage'
 import {
   Badge,
   Button,
@@ -111,16 +113,33 @@ const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
   러시아: '🇷🇺',
 }
 const UNKNOWN_COUNTRY_FLAG = '🏳️'
-const UNKNOWN_COUNTRY_LABEL = '원산지 미상'
 
-const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아']
+const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아', UNKNOWN_ORIGIN_LABEL]
 
-function countryLabel(country: string) {
-  return `${country === UNKNOWN_COUNTRY_LABEL ? UNKNOWN_COUNTRY_FLAG : COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-function countryFlag(country: string | null) {
-  return country ? COUNTRY_FLAG_BY_NAME[country] ?? (country === UNKNOWN_COUNTRY_LABEL ? UNKNOWN_COUNTRY_FLAG : '•') : UNKNOWN_COUNTRY_FLAG
+function originCountryLabelFromRaw(raw: unknown): string {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {}
+
+  return stringValue(record.originCountry) ?? stringValue(record.origin) ?? UNKNOWN_ORIGIN_LABEL
+}
+
+function countryLabel(country: string) {
+  return `${country === UNKNOWN_ORIGIN_LABEL ? UNKNOWN_COUNTRY_FLAG : COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
+}
+
+function CountryFlag({
+  country,
+}: {
+  country: string
+}) {
+  if (country === UNKNOWN_ORIGIN_LABEL) {
+    return <>{UNKNOWN_COUNTRY_FLAG}</>
+  }
+
+  return <>{COUNTRY_FLAG_BY_NAME[country] ?? '•'}</>
 }
 
 function badgeTone(tag: string) {
@@ -205,11 +224,11 @@ function SpeciesLabel({
     return (
       <span className="grid min-w-0 grid-rows-[auto_auto_auto] justify-items-start gap-1 leading-tight">
         <span
-          aria-label={row.speciesCountryLabel ?? '국가 미상'}
-          className="text-base leading-none lg:text-lg"
-          title={row.speciesCountryLabel ?? '국가 미상'}
+          aria-label={row.speciesCountryLabel}
+          className="inline-flex h-5 items-center text-base leading-none lg:h-6 lg:text-lg"
+          title={row.speciesCountryLabel}
         >
-          {countryFlag(row.speciesCountryLabel)}
+          <CountryFlag country={row.speciesCountryLabel} />
         </span>
         <span className="min-w-0 text-[0.84rem] font-bold text-bushiri-ink [overflow-wrap:anywhere] lg:text-[0.98rem]">
           {row.speciesLabel}
@@ -373,7 +392,7 @@ function MarketListingCard({
       ) : null}
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
         <strong className="font-mono text-[1.02rem] font-extrabold leading-none tracking-normal text-bushiri-ink tabular-nums [overflow-wrap:anywhere] lg:text-[1.18rem] xl:text-[1.34rem]">
-          {formatCurrency(listing.price)}
+          {formatKgManwonPrice(listing.price)}
         </strong>
         {hasWeightLabel ? (
           <span className="text-[0.72rem] font-extrabold leading-none text-bushiri-muted">
@@ -434,21 +453,7 @@ export function TodayPage() {
   const countryOptions = useMemo(() => {
     const countries = Array.from(
       new Set(
-        marketRows
-          .map((row) => {
-            const raw =
-              typeof row.raw === 'object' && row.raw !== null
-                ? (row.raw as Record<string, unknown>)
-                : null
-            const originCountry = raw?.originCountry
-
-            if (typeof originCountry === 'string' && originCountry.trim()) {
-              return originCountry.trim()
-            }
-
-            return typeof row.market === 'string' && row.market.trim() ? row.market.trim() : null
-          })
-          .filter((value): value is string => value !== null),
+        marketRows.map((row) => originCountryLabelFromRaw(row.raw)),
       ),
     )
     const orderedCountries = [
@@ -476,11 +481,11 @@ export function TodayPage() {
           ? (row.raw as Record<string, unknown>)
           : null
       const soldOut = raw?.soldOut === true
-      const originCountry =
-        typeof raw?.originCountry === 'string' && raw.originCountry.trim()
-          ? raw.originCountry.trim()
-          : row.market
-      const matchesCountry = countries.length === 0 || countries.includes(originCountry)
+      const originCountry = originCountryLabelFromRaw(row.raw)
+      const countrySelectionEmpty = countries.includes(NO_COUNTRY_SELECTION)
+      const matchesCountry =
+        !countrySelectionEmpty &&
+        (countries.length === 0 || countries.includes(originCountry))
 
       return (
         matchesQuery &&
@@ -490,18 +495,36 @@ export function TodayPage() {
     })
   }, [countries, excludeSoldOut, marketRows, query])
 
+  const sectionCountRows = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+
+    return marketRows.filter((row) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        row.canonicalName.toLowerCase().includes(normalizedQuery)
+      const raw =
+        typeof row.raw === 'object' && row.raw !== null
+          ? (row.raw as Record<string, unknown>)
+          : null
+      const soldOut = raw?.soldOut === true
+
+      return (
+        matchesQuery &&
+        (!excludeSoldOut || !soldOut)
+      )
+    })
+  }, [excludeSoldOut, marketRows, query])
+
   const board = useMemo(() => buildTodayBoard(filteredRows), [filteredRows])
+  const sectionCountBoard = useMemo(() => buildTodayBoard(sectionCountRows), [sectionCountRows])
   const visibleSections = useMemo(
     () => board.sections.filter((section) => section.key === activeSection),
     [activeSection, board.sections],
   )
   const visibleRows = visibleSections.flatMap((section) => section.rows)
   const showSpeciesCountryFlag =
-    new Set(
-      visibleRows
-        .map((row) => row.speciesCountryLabel)
-        .filter((countryName): countryName is string => countryName !== null),
-    ).size > 1
+    new Set(visibleRows.map((row) => row.speciesCountryLabel)).size > 1 ||
+    visibleRows.some((row) => row.speciesCountryLabel === UNKNOWN_ORIGIN_LABEL)
 
   const activeSectionLabel = visibleSections[0]?.label ?? '회'
   const emptyState =
@@ -581,7 +604,7 @@ export function TodayPage() {
           <LabeledField label="분류" as="div">
             <SegmentedControl
               ariaLabel="시세판 섹션 선택"
-              items={board.sections.map((section) => ({
+              items={sectionCountBoard.sections.map((section) => ({
                 value: section.key,
                 label: section.label,
                 detail: formatNumber(section.rows.length),
@@ -682,7 +705,15 @@ export function TodayPage() {
                         {section.rows.map((row) => (
                           <tr key={row.key} className="align-top">
                             <th scope="row" className="border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted/90 p-2 align-middle last:border-b-0 lg:p-3">
-                              <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
+                              <button
+                                aria-label={`${row.canonicalName} 어종 정보 보기`}
+                                className="grid min-h-16 w-full min-w-0 place-items-start text-left transition hover:text-bushiri-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
+                                onClick={() => navigateToSpeciesInfo(row.canonicalName)}
+                                title={`${row.canonicalName} 어종 정보 보기`}
+                                type="button"
+                              >
+                                <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
+                              </button>
                             </th>
                             {section.vendorColumns.map((vendor) => {
                               const listings = row.cells[vendor] ?? []
@@ -746,8 +777,7 @@ export function TodayPage() {
 
                       return (
                         <article key={`summary-${row.key}`} className="border-b border-bushiri-ink/15 last:border-b-0">
-                          <button
-                            aria-expanded={isExpanded}
+                          <div
                             className={cn(
                               'grid w-full items-center gap-3 bg-bushiri-surface/90 p-3 text-left text-bushiri-ink transition hover:bg-white focus-visible:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bushiri-primary active:translate-y-px',
                               showSpeciesCountryFlag
@@ -755,18 +785,29 @@ export function TodayPage() {
                                 : 'grid-cols-[76px_minmax(0,1fr)]',
                               isExpanded ? 'bg-white' : '',
                             )}
-                            onClick={() => toggleSpecies(row.key)}
-                            type="button"
                           >
-                            <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
-                            <span className="flex min-w-0 flex-wrap items-baseline gap-2">
+                            <button
+                              aria-label={`${row.canonicalName} 어종 정보 보기`}
+                              className="min-w-0 text-left transition hover:text-bushiri-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
+                              onClick={() => navigateToSpeciesInfo(row.canonicalName)}
+                              type="button"
+                            >
+                              <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
+                            </button>
+                            <button
+                              aria-expanded={isExpanded}
+                              aria-label={`${row.canonicalName} 판매처별 시세 ${isExpanded ? '접기' : '펼치기'}`}
+                              className="flex min-w-0 flex-wrap items-baseline gap-2 rounded-md text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
+                              onClick={() => toggleSpecies(row.key)}
+                              type="button"
+                            >
                               {lowest ? (
                                 <>
                                   <span className="max-w-[12ch] overflow-hidden text-ellipsis whitespace-nowrap text-[0.86rem] font-extrabold text-bushiri-muted">
                                     {lowest.vendor}
                                   </span>
                                   <strong className="font-mono text-lg font-extrabold leading-none text-bushiri-ink tabular-nums">
-                                    {formatCurrency(lowest.listing.price)}
+                                    {formatKgManwonPrice(lowest.listing.price)}
                                   </strong>
                                   {lowest.listing.weightLabel !== '중량 미상' ? (
                                     <span className="text-[0.72rem] font-extrabold text-bushiri-muted">
@@ -782,8 +823,8 @@ export function TodayPage() {
                               ) : (
                                 <span className="block min-h-6 min-w-24 rounded bg-bushiri-ink/[0.07]" aria-hidden="true" />
                               )}
-                            </span>
-                          </button>
+                            </button>
+                          </div>
                           {isExpanded ? (
                             <div className="grid gap-3 border-t border-bushiri-ink/10 bg-bushiri-surface-muted/50 px-3 pb-3">
                               {vendorEntries.map(({ vendor, listings }) => (

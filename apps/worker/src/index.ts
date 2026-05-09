@@ -84,6 +84,8 @@ const worker = {
       url.pathname === '/api/market/today' ||
       url.pathname === '/api/insights' ||
       /^\/api\/market\/species\/.+/.test(url.pathname) ||
+      url.pathname === '/api/species-info' ||
+      /^\/api\/species-info\/.+/.test(url.pathname) ||
       url.pathname === '/api/admin/raw-posts'
     ) {
       response = await handleMarketReadRequest(request, env, url)

@@ -82,6 +82,28 @@ export type SpeciesTrendResponse = {
   currency: string
 }
 
+export type SpeciesProfile = {
+  canonicalName: string
+  category: string
+  koreanName: string
+  scientificName: string | null
+  englishName: string | null
+  aliases: string[]
+  seasonMonths: string
+  seasonNote: string
+  marketWeightNote: string
+  habitatNote: string
+  tasteNote: string
+  buyingNote: string
+  photoUrl: string
+  photoSourceUrl: string
+  photoAttribution: string
+  photoLicense: string
+  infoSources: string[]
+  sortOrder: number
+  raw: unknown
+}
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 const LOCAL_ADMIN_BASE = '/__bushiri_admin'
 
@@ -182,6 +204,43 @@ function toNumberValue(value: unknown) {
   }
 
   return null
+}
+
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => toStringValue(item, '').trim())
+      .filter(Boolean)
+  }
+
+  if (typeof value === 'string') {
+    const text = value.trim()
+
+    if (!text) {
+      return []
+    }
+
+    if (text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text) as unknown
+
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item) => toStringValue(item, '').trim())
+            .filter(Boolean)
+        }
+      } catch {
+        return []
+      }
+    }
+
+    return text
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+
+  return []
 }
 
 function translateVendorType(value: string) {
@@ -471,6 +530,36 @@ function normalizeTrendPoint(value: unknown, index: number): SpeciesTrendPoint {
   }
 }
 
+function normalizeSpeciesProfile(value: unknown, index: number): SpeciesProfile {
+  const record = isRecord(value) ? value : {}
+  const canonicalName = toStringValue(
+    getCandidate(record, ['canonicalName', 'canonical_name', 'koreanName', 'korean_name', 'name']),
+    `어종-${index + 1}`,
+  )
+
+  return {
+    canonicalName,
+    category: toStringValue(getCandidate(record, ['category']), 'fish'),
+    koreanName: toStringValue(getCandidate(record, ['koreanName', 'korean_name', 'name']), canonicalName),
+    scientificName: (getCandidate(record, ['scientificName', 'scientific_name']) as string | null) ?? null,
+    englishName: (getCandidate(record, ['englishName', 'english_name']) as string | null) ?? null,
+    aliases: toStringArray(getCandidate(record, ['aliases', 'aliasNames', 'alias_names'])),
+    seasonMonths: toStringValue(getCandidate(record, ['seasonMonths', 'season_months']), '연중'),
+    seasonNote: toStringValue(getCandidate(record, ['seasonNote', 'season_note']), '제철 정보가 아직 없습니다.'),
+    marketWeightNote: toStringValue(getCandidate(record, ['marketWeightNote', 'market_weight_note']), '중량 정보가 아직 없습니다.'),
+    habitatNote: toStringValue(getCandidate(record, ['habitatNote', 'habitat_note']), '서식 정보가 아직 없습니다.'),
+    tasteNote: toStringValue(getCandidate(record, ['tasteNote', 'taste_note']), '맛 정보가 아직 없습니다.'),
+    buyingNote: toStringValue(getCandidate(record, ['buyingNote', 'buying_note']), '구매 메모가 아직 없습니다.'),
+    photoUrl: toStringValue(getCandidate(record, ['photoUrl', 'photo_url']), ''),
+    photoSourceUrl: toStringValue(getCandidate(record, ['photoSourceUrl', 'photo_source_url']), ''),
+    photoAttribution: toStringValue(getCandidate(record, ['photoAttribution', 'photo_attribution']), '사진 출처 미상'),
+    photoLicense: toStringValue(getCandidate(record, ['photoLicense', 'photo_license']), ''),
+    infoSources: toStringArray(getCandidate(record, ['infoSources', 'info_sources'])),
+    sortOrder: toNumberValue(getCandidate(record, ['sortOrder', 'sort_order'])) ?? index,
+    raw: value,
+  }
+}
+
 export async function getTodayMarket(date?: string): Promise<TodayMarketResponse> {
   const query = date?.trim() ? `?date=${encodeURIComponent(date.trim())}` : ''
   const payload = await requestJson(`/api/market/today${query}`)
@@ -502,6 +591,11 @@ export async function getRawPosts(): Promise<RawPostItem[]> {
 export async function getAdminSources(): Promise<SourceConfigItem[]> {
   const payload = await requestJson(buildAdminUrl('/sources'))
   return extractArray(payload, ['sources', 'items', 'rows']).map(normalizeSourceConfig)
+}
+
+export async function getSpeciesProfiles(): Promise<SpeciesProfile[]> {
+  const payload = await requestJson('/api/species-info')
+  return extractArray(payload, ['items', 'profiles', 'rows']).map(normalizeSpeciesProfile)
 }
 
 export async function getSpeciesTrend(

@@ -10,11 +10,13 @@ export type TodayBoardListing = {
   raw: unknown
 }
 
+export const UNKNOWN_ORIGIN_LABEL = '원산지 미상'
+
 export type TodayBoardRow = {
   key: string
   canonicalName: string
   speciesLabel: string
-  speciesCountryLabel: string | null
+  speciesCountryLabel: string
   speciesOriginLabel: string | null
   cells: Record<string, TodayBoardListing[]>
 }
@@ -56,6 +58,14 @@ function formatWeight(raw: Record<string, unknown>): string {
 
 function stringValue(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function originCountryLabel(raw: Record<string, unknown>): string {
+  return stringValue(raw.originCountry) ?? stringValue(raw.origin) ?? UNKNOWN_ORIGIN_LABEL
+}
+
+function originCountryKey(raw: Record<string, unknown>): string {
+  return stringValue(raw.originCountry) ?? stringValue(raw.origin) ?? 'origin-unknown'
 }
 
 function pushUnique(tags: string[], value: string | null | undefined) {
@@ -300,7 +310,7 @@ function pushUniqueValue(values: string[], value: string) {
 }
 
 function speciesRowKey(row: BoardInputRow, raw: Record<string, unknown>): string {
-  const originCountry = stringValue(raw.originCountry) ?? stringValue(raw.origin) ?? 'origin-unknown'
+  const originCountry = originCountryKey(raw)
   const originDetail = stringValue(raw.originDetail) ?? 'detail-none'
 
   return `${row.canonicalName}|${originCountry}|${originDetail}`
@@ -401,7 +411,7 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
         key: `${sectionKey}-${rowKey}`,
         canonicalName: row.canonicalName,
         speciesLabel: row.canonicalName,
-        speciesCountryLabel: stringValue(raw.originCountry) ?? stringValue(raw.origin),
+        speciesCountryLabel: originCountryLabel(raw),
         speciesOriginLabel: stringValue(raw.originDetail),
         cells: {},
       })

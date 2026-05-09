@@ -8,6 +8,11 @@ export const NAV_ITEMS = [
     description: '어종·판매처 비교',
   },
   {
+    route: '/species-info',
+    label: '어종 정보',
+    description: '제철·중량 도감',
+  },
+  {
     route: '/trends',
     label: '시세 추이',
     description: '최근 가격 흐름',
@@ -31,6 +36,7 @@ const ADMIN_ROUTES = new Set<AppRoute>(['/raw-posts', '/settings'])
 
 export const ROUTE_LABELS: Record<AppRoute, string> = {
   '/today': '오늘 시세판',
+  '/species-info': '어종 정보',
   '/trends': '시세 추이',
   '/raw-posts': '원문 검수',
   '/settings': '소스 설정',
