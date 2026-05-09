@@ -66,12 +66,13 @@ Examples:
 - `제주산 양식 광어` becomes `canonical_name/display_name = 광어`, `origin = 국내산`, `origin_country = 국내산`, `origin_detail = 제주산`, `production_type = 양식`.
 - `국내산 낚시바리 자연산 광어` becomes `canonical_name/display_name = 광어`, `origin = 국내산`, `origin_country = 국내산`, `origin_detail = 낚시바리`, `production_type = 자연산`.
 - `활 광어 1.3~1.5kg` becomes species `광어`, `freshness_state = 활어`, `size_min_kg = 1.3`, `size_max_kg = 1.5`.
+- `광어 반반 가능` or `광어 반반` becomes species `광어`, `half_available = true`; do not store `반반` in `grade`, `notes`, or UI tags unless the seller adds separate explanatory text that belongs in notes.
 
 Use these field buckets:
 
 - Compatibility origin: keep existing `origin` as the country-level value.
 - Country origin: store `origin_country` as `국내산`, `일본산`, `중국산`, `노르웨이`, `러시아`, or the explicit country shown.
-- Origin detail: store exactly one `origin_detail` using priority `낚시바리 > 자연산 > 지역산 > 양식`. Use values such as `낚시바리`, `자연산`, `제주산`, `통영산`, `완도산`, or `양식`. Leave it null when only a country is known.
+- Origin detail: store exactly one `origin_detail` using priority `낚시바리 > 자연산 > 지역산 > 양식`. Use values such as `낚시바리`, `자연산`, `제주산`, `통영산`, `완도산`, or `양식`. Leave it null when only a country is known. If both a region and `양식` are present, keep the region in `origin_detail` and put `양식` in `production_type`.
 - Production type: `자연산`, `양식`.
 - Freshness/status: `활어`, `선어`, `찍어바리`, `꼬물이`.
 - Grade/descriptor: `A급`, `상급`, `상태최강`, `땅크`, `예약판매`, similar seller terms. Treat `낚시바리` as `origin_detail` first; duplicate it in `grade` only when the seller clearly uses it as an additional grade/descriptor.
@@ -117,5 +118,9 @@ Before reporting completion, verify:
 - The deployed `POST /api/admin/discord/daily-summary` endpoint has been called with the target `marketDate`, and the Discord alert message exists or was updated for that date in the DB-configured channel.
 - The Discord alert message includes the selected highlights, watched-species summary when watched species are present that day, and a watch select menu for the candidate species. Test the select menu only if Discord credentials and channel access are available.
 - The review page shows the raw post and skip reason if applicable.
-- The market board groups rows by `canonical_name + origin_country + origin_detail`. It shows `품목명` or `품목명` line break `(origin_detail)`; when only a country exists, it shows the species name only. The board offers section filtering for `회`/`갑각류`, a single-select country dropdown with flags, and sold-out filtering in the query conditions area.
-- The market board shows weight to the right of the price and never as a tag. When `half_available` is true, it shows `(반반)` to the right of the weight and never as a tag. Award cards show right-top badges labeled `AI추천`, `최저가`, and `최상품`; multiple awards can appear side by side on one card. Card backgrounds use light gold, light blue, and light green treatments, blending the colors with gradients when multiple awards overlap.
+- The market board groups rows by `canonical_name + origin_country + origin_detail`, and rows with the same `canonical_name` stay adjacent. It shows `품목명` or `품목명` line break `(origin_detail)`; when only a country exists, it shows the species name only.
+- When multiple countries are visible for the same species, the species cell uses three stacked lines: country flag, species name, then `(origin_detail)` when present.
+- The market board offers section filtering for `회`/`갑각류`, sold-out filtering, and a multi-select country dropdown with flags in the query conditions area. The country dropdown has a top all-select checkbox; when all countries are currently selected, clicking it acts as all-clear and the dropdown shows no selected countries.
+- The market board shows weight to the right of the price and never as a tag. When `half_available` is true, it shows `(반반)` to the right of the weight and never as a tag.
+- Tags and variant labels never show country/detail/production classification values such as `국내산`, `자연산`, `낚시바리`, `제주산`, or `양식`; those values belong in origin fields and the species label area.
+- Award cards show right-top badges labeled `AI추천`, `최저가`, and `최상품`; multiple awards can appear side by side on one card. Card backgrounds use light gold, light blue, and light green treatments, blending the colors with gradients when multiple awards overlap.
