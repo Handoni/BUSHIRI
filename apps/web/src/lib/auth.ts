@@ -19,6 +19,8 @@ export const AUTH_STORAGE_KEY = 'bushiri.auth.session'
 const ADMIN_USERNAME = 'simgip'
 const ADMIN_PASSWORD = 'gogamo'
 const authChangeEvent = 'bushiri-auth-change'
+let cachedStorageValue: string | null | undefined
+let cachedAuthSnapshot: AuthSession | null = null
 
 const ACCOUNTS: Record<string, { password: string; role: AuthRole; permissions: AuthPermission[] }> = {
   [ADMIN_USERNAME]: {
@@ -90,8 +92,18 @@ function emitAuthChange() {
   window.dispatchEvent(new Event(authChangeEvent))
 }
 
+export function getAuthSnapshotFromStorageValue(value: string | null): AuthSession | null {
+  if (value === cachedStorageValue) {
+    return cachedAuthSnapshot
+  }
+
+  cachedStorageValue = value
+  cachedAuthSnapshot = deserializeAuthSession(value)
+  return cachedAuthSnapshot
+}
+
 function getSnapshot(): AuthSession | null {
-  return deserializeAuthSession(getStorage()?.getItem(AUTH_STORAGE_KEY) ?? null)
+  return getAuthSnapshotFromStorageValue(getStorage()?.getItem(AUTH_STORAGE_KEY) ?? null)
 }
 
 function subscribe(callback: () => void) {
