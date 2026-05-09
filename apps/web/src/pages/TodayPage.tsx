@@ -25,10 +25,8 @@ import {
   SelectControl,
   ToggleSwitch,
   cn,
+  inputControlClass,
 } from '../components/ui'
-
-const inputClass =
-  'min-h-10 w-full rounded-lg border border-[#d8dbd2] bg-[#fffefa] px-3 text-sm text-[#141512] outline-none transition focus:border-[#174f49] focus:ring-2 focus:ring-[#174f49]/15'
 
 const DEFAULT_BOARD_SECTION: TodayBoardSectionKey = 'fish'
 const BOARD_SECTION_KEYS: TodayBoardSectionKey[] = ['fish', 'crustacean']
@@ -134,31 +132,31 @@ function badgeTone(tag: string) {
 
 function awardCardToneClass(listing: TodayBoardListing) {
   if (listing.isAiRecommended && listing.isLowestPrice && listing.isBestCondition) {
-    return 'border-[#d8a318]/45 bg-[radial-gradient(circle_at_12%_18%,rgba(255,225,138,0.92)_0%,rgba(255,225,138,0)_46%),radial-gradient(circle_at_88%_16%,rgba(216,237,255,0.96)_0%,rgba(216,237,255,0)_48%),radial-gradient(circle_at_48%_100%,rgba(223,245,223,0.98)_0%,rgba(223,245,223,0)_52%),linear-gradient(135deg,#fff9df_0%,#eefaf0_48%,#edf7ff_100%)] hover:bg-[radial-gradient(circle_at_12%_18%,rgba(255,225,138,1)_0%,rgba(255,225,138,0)_48%),radial-gradient(circle_at_88%_16%,rgba(216,237,255,1)_0%,rgba(216,237,255,0)_50%),radial-gradient(circle_at_48%_100%,rgba(223,245,223,1)_0%,rgba(223,245,223,0)_54%),linear-gradient(135deg,#fff4bd_0%,#f5fff4_48%,#f2f9ff_100%)]'
+    return 'award-tone-ai-low-best'
   }
 
   if (listing.isAiRecommended && listing.isLowestPrice) {
-    return 'border-[#d8a318]/45 bg-[radial-gradient(circle_at_18%_18%,rgba(255,225,138,0.94)_0%,rgba(255,225,138,0)_54%),radial-gradient(circle_at_90%_16%,rgba(216,237,255,0.98)_0%,rgba(216,237,255,0)_56%),linear-gradient(135deg,#fff8d8_0%,#edf7ff_100%)] hover:bg-[radial-gradient(circle_at_18%_18%,rgba(255,225,138,1)_0%,rgba(255,225,138,0)_56%),radial-gradient(circle_at_90%_16%,rgba(216,237,255,1)_0%,rgba(216,237,255,0)_58%),linear-gradient(135deg,#fff2b8_0%,#f2f9ff_100%)]'
+    return 'award-tone-ai-low'
   }
 
   if (listing.isAiRecommended && listing.isBestCondition) {
-    return 'border-[#d8a318]/45 bg-[radial-gradient(circle_at_18%_18%,rgba(255,225,138,0.94)_0%,rgba(255,225,138,0)_54%),radial-gradient(circle_at_84%_92%,rgba(223,245,223,0.98)_0%,rgba(223,245,223,0)_58%),linear-gradient(135deg,#fff8d8_0%,#f3fbef_100%)] hover:bg-[radial-gradient(circle_at_18%_18%,rgba(255,225,138,1)_0%,rgba(255,225,138,0)_56%),radial-gradient(circle_at_84%_92%,rgba(223,245,223,1)_0%,rgba(223,245,223,0)_60%),linear-gradient(135deg,#fff2b8_0%,#f5fff4_100%)]'
+    return 'award-tone-ai-best'
   }
 
   if (listing.isLowestPrice && listing.isBestCondition) {
-    return 'border-[#7da7c8]/50 bg-[radial-gradient(circle_at_88%_18%,rgba(216,237,255,0.98)_0%,rgba(216,237,255,0)_56%),radial-gradient(circle_at_18%_88%,rgba(223,245,223,0.98)_0%,rgba(223,245,223,0)_58%),linear-gradient(135deg,#edf7ff_0%,#f3fbef_100%)] hover:bg-[radial-gradient(circle_at_88%_18%,rgba(216,237,255,1)_0%,rgba(216,237,255,0)_58%),radial-gradient(circle_at_18%_88%,rgba(223,245,223,1)_0%,rgba(223,245,223,0)_60%),linear-gradient(135deg,#f2f9ff_0%,#f5fff4_100%)]'
+    return 'award-tone-low-best'
   }
 
   if (listing.isAiRecommended) {
-    return 'border-[#d8a318]/45 bg-[#fff5c8] hover:bg-[#fff1ae]'
+    return 'border-bushiri-award-ai/60 bg-bushiri-award-ai/45 hover:bg-bushiri-award-ai/60'
   }
 
   if (listing.isLowestPrice) {
-    return 'border-[#7da7c8]/50 bg-[#eaf5ff] hover:bg-[#f2f9ff]'
+    return 'border-bushiri-current/35 bg-bushiri-award-low/70 hover:bg-bushiri-award-low'
   }
 
   if (listing.isBestCondition) {
-    return 'border-[#8ebd8a]/50 bg-[#edf9ed] hover:bg-[#f5fff4]'
+    return 'border-bushiri-kelp/35 bg-bushiri-award-best/70 hover:bg-bushiri-award-best'
   }
 
   return ''
@@ -169,19 +167,19 @@ function awardBadges(listing: TodayBoardListing) {
     listing.isAiRecommended
       ? {
           label: 'AI추천',
-          className: 'border-[#b8870f]/35 bg-[#ffe18a] text-[#6f4d00]',
+          className: 'border-bushiri-award-ai-text/35 bg-bushiri-award-ai text-bushiri-award-ai-text',
         }
       : null,
     listing.isLowestPrice
       ? {
           label: '최저가',
-          className: 'border-[#6f9dbc]/35 bg-[#d8edff] text-[#24516e]',
+          className: 'border-bushiri-current/35 bg-bushiri-award-low text-bushiri-award-low-text',
         }
       : null,
     listing.isBestCondition
       ? {
           label: '최상품',
-          className: 'border-[#78ad72]/35 bg-[#dff5df] text-[#2e6534]',
+          className: 'border-bushiri-kelp/35 bg-bushiri-award-best text-bushiri-award-best-text',
         }
       : null,
   ].filter((badge): badge is { label: string; className: string } => badge !== null)
@@ -205,12 +203,12 @@ function MarketListingCard({
   return (
     <article
       className={cn(
-        'relative flex min-h-24 min-w-0 flex-col gap-2 overflow-hidden rounded-md border border-[rgba(20,21,18,0.08)] p-2 transition duration-150 hover:border-[#174f49]/20 lg:p-3',
+        'relative flex min-h-24 min-w-0 flex-col gap-2 overflow-hidden rounded-md border border-bushiri-ink/10 p-2 transition duration-150 hover:border-bushiri-primary/20 lg:p-3',
         badges.length > 0 ? 'pt-7' : '',
-        !hasAwardTone && listing.statusTags.includes('품절') ? 'bg-[#8c3f3d]/10 hover:bg-[#8c3f3d]/15' : '',
-        !hasAwardTone && listing.statusTags.includes('이벤트') ? 'bg-[#174f49]/10 hover:bg-[#174f49]/15' : '',
+        !hasAwardTone && listing.statusTags.includes('품절') ? 'bg-bushiri-danger/10 hover:bg-bushiri-danger/15' : '',
+        !hasAwardTone && listing.statusTags.includes('이벤트') ? 'bg-bushiri-primary/10 hover:bg-bushiri-primary/15' : '',
         !hasAwardTone && !listing.statusTags.includes('품절') && !listing.statusTags.includes('이벤트')
-          ? 'bg-[#fffefa]/90 hover:bg-white'
+          ? 'bg-bushiri-surface/90 hover:bg-white'
           : '',
         awardCardToneClass(listing),
       )}
@@ -231,16 +229,16 @@ function MarketListingCard({
         </div>
       ) : null}
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
-        <strong className="font-mono text-[1.02rem] font-extrabold leading-none tracking-normal text-[#141512] tabular-nums [overflow-wrap:anywhere] lg:text-[1.18rem] xl:text-[1.34rem]">
+        <strong className="font-mono text-[1.02rem] font-extrabold leading-none tracking-normal text-bushiri-ink tabular-nums [overflow-wrap:anywhere] lg:text-[1.18rem] xl:text-[1.34rem]">
           {formatCurrency(listing.price)}
         </strong>
         {hasWeightLabel ? (
-          <span className="text-[0.72rem] font-extrabold leading-none text-[#676b63]">
+          <span className="text-[0.72rem] font-extrabold leading-none text-bushiri-muted">
             {listing.weightLabel}
           </span>
         ) : null}
         {listing.halfAvailable ? (
-          <span className="text-[0.72rem] font-extrabold leading-none text-[#174f49]">
+          <span className="text-[0.72rem] font-extrabold leading-none text-bushiri-primary">
             (반반)
           </span>
         ) : null}
@@ -424,7 +422,7 @@ export function TodayPage() {
         <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.8fr)] items-end gap-2.5 max-xl:grid-cols-3 max-md:grid-cols-1">
           <LabeledField label="기준일">
             <input
-              className={inputClass}
+              className={inputControlClass}
               type="date"
               value={selectedDate}
               onChange={(event) => updateSelectedDate(event.target.value)}
@@ -498,16 +496,16 @@ export function TodayPage() {
               <div className="grid gap-5">
                 {visibleSections.map((section) => (
                   <section key={section.key} className="grid gap-2">
-                  <header className="flex items-end justify-between gap-3 border-b border-[rgba(20,21,18,0.12)] pb-2">
-                    <h3 className="m-0 text-base font-extrabold leading-tight text-[#141512]">
+                  <header className="flex items-end justify-between gap-3 border-b border-bushiri-ink/15 pb-2">
+                    <h3 className="m-0 text-base font-extrabold leading-tight text-bushiri-ink">
                       {section.label}
                     </h3>
-                    <span className="text-xs font-bold text-[#676b63]">
+                    <span className="text-xs font-bold text-bushiri-muted">
                       {formatNumber(section.rows.length)}종
                     </span>
                   </header>
 
-                  <div className="hidden min-w-0 max-h-[min(72dvh,760px)] overflow-y-auto overflow-x-hidden rounded-lg border border-[rgba(20,21,18,0.12)] bg-[#fffefa]/95 md:block">
+                  <div className="hidden min-w-0 max-h-[min(72dvh,760px)] overflow-y-auto overflow-x-hidden rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:block">
                     <table className="w-full table-fixed border-separate border-spacing-0 text-left">
                       <colgroup>
                         <col className="w-[72px] lg:w-[92px]" />
@@ -517,13 +515,13 @@ export function TodayPage() {
                       </colgroup>
                       <thead>
                         <tr>
-                          <th className="sticky top-0 z-[3] border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2] px-2 py-3 text-[0.72rem] font-bold uppercase tracking-normal text-[#676b63] lg:px-4 lg:text-[0.76rem]">
+                          <th className="sticky top-0 z-[3] border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted px-2 py-3 text-[0.72rem] font-bold uppercase tracking-normal text-bushiri-muted lg:px-4 lg:text-[0.76rem]">
                             어종
                           </th>
                           {section.vendorColumns.map((vendor) => (
                             <th
                               key={vendor}
-                              className="sticky top-0 z-[3] border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2] p-2 text-[0.76rem] font-bold tracking-normal text-[#1a1d18] [overflow-wrap:anywhere] last:border-r-0 lg:p-3 lg:text-[0.84rem]"
+                              className="sticky top-0 z-[3] border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted p-2 text-[0.76rem] font-bold tracking-normal text-bushiri-ink-soft [overflow-wrap:anywhere] last:border-r-0 lg:p-3 lg:text-[0.84rem]"
                               title={vendor}
                               aria-label={vendor}
                             >
@@ -535,11 +533,11 @@ export function TodayPage() {
                       <tbody>
                         {section.rows.map((row) => (
                           <tr key={row.key} className="align-top">
-                            <th scope="row" className="border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2]/90 p-2 align-middle last:border-b-0 lg:p-3">
-                              <strong className="block text-[0.84rem] font-bold leading-tight text-[#141512] [overflow-wrap:anywhere] lg:text-[0.98rem]">
+                            <th scope="row" className="border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted/90 p-2 align-middle last:border-b-0 lg:p-3">
+                              <strong className="block text-[0.84rem] font-bold leading-tight text-bushiri-ink [overflow-wrap:anywhere] lg:text-[0.98rem]">
                                 <span className="block">{row.speciesLabel}</span>
                                 {row.speciesOriginLabel ? (
-                                  <span className="mt-1 block text-[0.72rem] font-extrabold text-[#676b63] lg:text-[0.8rem]">
+                                  <span className="mt-1 block text-[0.72rem] font-extrabold text-bushiri-muted lg:text-[0.8rem]">
                                     ({row.speciesOriginLabel})
                                   </span>
                                 ) : null}
@@ -552,14 +550,14 @@ export function TodayPage() {
                                 <td
                                   key={`${row.key}-${vendor}`}
                                   className={cn(
-                                    'border-r border-b border-[rgba(20,21,18,0.12)] p-0 last:border-r-0',
+                                    'border-r border-b border-bushiri-ink/15 p-0 last:border-r-0',
                                     listings.length === 0
-                                      ? 'empty-market-cell bg-[rgba(20,21,18,0.07)]'
+                                      ? 'empty-market-cell bg-bushiri-ink/[0.07]'
                                       : '',
                                   )}
                                 >
                                   {listings.length > 0 ? (
-                                    <div className="flex min-h-28 min-w-0 flex-col gap-2 bg-[#fffefa]/60 p-1.5 lg:p-2">
+                                    <div className="flex min-h-28 min-w-0 flex-col gap-2 bg-bushiri-surface/60 p-1.5 lg:p-2">
                                       {listings.map((listing, listingIndex) => (
                                         <MarketListingCard
                                           key={`${row.key}-${vendor}-${listing.variantLabel}-${listingIndex}`}
@@ -582,8 +580,8 @@ export function TodayPage() {
                     </table>
                   </div>
 
-                  <div className="max-h-[min(72dvh,760px)] overflow-auto rounded-lg border border-[rgba(20,21,18,0.12)] bg-[#fffefa]/95 md:hidden" aria-label={`${section.label} 어종별 최저가 시세판`}>
-                    <div className="sticky top-0 z-[2] grid grid-cols-[76px_minmax(0,1fr)] items-center gap-3 border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2] p-3 text-[0.76rem] font-extrabold text-[#676b63]" aria-hidden="true">
+                  <div className="max-h-[min(72dvh,760px)] overflow-auto rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:hidden" aria-label={`${section.label} 어종별 최저가 시세판`}>
+                    <div className="sticky top-0 z-[2] grid grid-cols-[76px_minmax(0,1fr)] items-center gap-3 border-b border-bushiri-ink/15 bg-bushiri-surface-muted p-3 text-[0.76rem] font-extrabold text-bushiri-muted" aria-hidden="true">
                       <span>어종</span>
                       <span>최저가 판매처</span>
                     </div>
@@ -598,11 +596,11 @@ export function TodayPage() {
                         .filter(({ listings }) => listings.length > 0)
 
                       return (
-                        <article key={`summary-${row.key}`} className="border-b border-[rgba(20,21,18,0.12)] last:border-b-0">
+                        <article key={`summary-${row.key}`} className="border-b border-bushiri-ink/15 last:border-b-0">
                           <button
                             aria-expanded={isExpanded}
                             className={cn(
-                              'grid w-full grid-cols-[76px_minmax(0,1fr)] items-center gap-3 bg-[#fffefa]/90 p-3 text-left text-[#141512] transition hover:bg-white focus-visible:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#174f49] active:translate-y-px',
+                              'grid w-full grid-cols-[76px_minmax(0,1fr)] items-center gap-3 bg-bushiri-surface/90 p-3 text-left text-bushiri-ink transition hover:bg-white focus-visible:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bushiri-primary active:translate-y-px',
                               isExpanded ? 'bg-white' : '',
                             )}
                             onClick={() => toggleSpecies(row.key)}
@@ -611,7 +609,7 @@ export function TodayPage() {
                             <span className="font-extrabold leading-tight [word-break:keep-all]">
                               <span className="block">{row.speciesLabel}</span>
                               {row.speciesOriginLabel ? (
-                                <span className="mt-1 block text-[0.72rem] text-[#676b63]">
+                                <span className="mt-1 block text-[0.72rem] text-bushiri-muted">
                                   ({row.speciesOriginLabel})
                                 </span>
                               ) : null}
@@ -619,33 +617,33 @@ export function TodayPage() {
                             <span className="flex min-w-0 flex-wrap items-baseline gap-2">
                               {lowest ? (
                                 <>
-                                  <span className="max-w-[12ch] overflow-hidden text-ellipsis whitespace-nowrap text-[0.86rem] font-extrabold text-[#676b63]">
+                                  <span className="max-w-[12ch] overflow-hidden text-ellipsis whitespace-nowrap text-[0.86rem] font-extrabold text-bushiri-muted">
                                     {lowest.vendor}
                                   </span>
-                                  <strong className="font-mono text-lg font-extrabold leading-none text-[#141512] tabular-nums">
+                                  <strong className="font-mono text-lg font-extrabold leading-none text-bushiri-ink tabular-nums">
                                     {formatCurrency(lowest.listing.price)}
                                   </strong>
                                   {lowest.listing.weightLabel !== '중량 미상' ? (
-                                    <span className="text-[0.72rem] font-extrabold text-[#676b63]">
+                                    <span className="text-[0.72rem] font-extrabold text-bushiri-muted">
                                       {lowest.listing.weightLabel}
                                     </span>
                                   ) : null}
                                   {lowest.listing.halfAvailable ? (
-                                    <span className="text-[0.72rem] font-extrabold text-[#174f49]">
+                                    <span className="text-[0.72rem] font-extrabold text-bushiri-primary">
                                       (반반)
                                     </span>
                                   ) : null}
                                 </>
                               ) : (
-                                <span className="block min-h-6 min-w-24 rounded bg-[rgba(20,21,18,0.07)]" aria-hidden="true" />
+                                <span className="block min-h-6 min-w-24 rounded bg-bushiri-ink/[0.07]" aria-hidden="true" />
                               )}
                             </span>
                           </button>
                           {isExpanded ? (
-                            <div className="grid gap-3 border-t border-[rgba(20,21,18,0.08)] bg-[#f7f7f2]/50 px-3 pb-3">
+                            <div className="grid gap-3 border-t border-bushiri-ink/10 bg-bushiri-surface-muted/50 px-3 pb-3">
                               {vendorEntries.map(({ vendor, listings }) => (
                                 <section key={`${row.key}-${vendor}`} className="grid gap-2 pt-3">
-                                  <h3 className="m-0 text-[0.82rem] font-bold leading-tight text-[#676b63]">
+                                  <h3 className="m-0 text-[0.82rem] font-bold leading-tight text-bushiri-muted">
                                     {vendor}
                                   </h3>
                                   <div className="flex flex-col gap-2">

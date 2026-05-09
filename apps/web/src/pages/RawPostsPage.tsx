@@ -15,10 +15,8 @@ import {
   PageHeader,
   Panel,
   SelectControl,
+  inputControlClass,
 } from '../components/ui'
-
-const inputClass =
-  'min-h-10 w-full rounded-lg border border-[#d8dbd2] bg-[#fffefa] px-3 text-sm text-[#141512] outline-none transition focus:border-[#174f49] focus:ring-2 focus:ring-[#174f49]/15'
 
 function getStatusTone(status: string) {
   const normalized = status.toLowerCase()
@@ -65,14 +63,14 @@ export function MaskedRawPostPreview({
     <button
       aria-expanded={isExpanded}
       aria-label={`${row.source} 마스킹 원문 ${toggleLabel}`}
-      className="flex w-full flex-col gap-2 rounded-md border border-[#d8dbd2] bg-[#fffefa] p-3 text-left transition hover:outline-2 hover:outline-offset-2 hover:outline-[#174f49]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49]/20"
+      className="flex w-full flex-col gap-2 rounded-md border border-bushiri-line bg-bushiri-surface p-3 text-left transition hover:outline-2 hover:outline-offset-2 hover:outline-bushiri-primary/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary/20"
       onClick={onToggle}
       type="button"
     >
-      <p className={`m-0 whitespace-pre-wrap break-words leading-relaxed ${isExpanded ? 'text-[#141512]' : 'text-[#676b63]'}`}>
+      <p className={`m-0 whitespace-pre-wrap break-words leading-relaxed ${isExpanded ? 'text-bushiri-ink' : 'text-bushiri-muted'}`}>
         {visibleText}
       </p>
-      <small className="text-xs font-extrabold text-[#174f49]">{toggleLabel}</small>
+      <small className="text-xs font-extrabold text-bushiri-primary">{toggleLabel}</small>
     </button>
   )
 }
@@ -145,7 +143,7 @@ export function RawPostsPage() {
           <div className="grid grid-cols-2 gap-3 max-md:w-full max-md:grid-cols-1">
             <LabeledField label="검색">
               <input
-                className={inputClass}
+                className={inputControlClass}
                 placeholder="원문 또는 상태 검색"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -197,7 +195,7 @@ export function RawPostsPage() {
                   <div className="flex flex-col gap-2">
                     <Badge label={row.status} tone={getStatusTone(row.status)} />
                     {row.parseError ? (
-                      <small className="text-xs leading-snug text-[#676b63]">{row.parseError}</small>
+                      <small className="text-xs leading-snug text-bushiri-muted">{row.parseError}</small>
                     ) : null}
                   </div>
                 ),
@@ -213,7 +211,7 @@ export function RawPostsPage() {
                 render: (row) => (
                   <div className="flex flex-col gap-2">
                     {row.url ? (
-                      <a className="font-bold text-[#174f49] transition hover:-translate-y-px focus-visible:-translate-y-px" href={row.url} target="_blank" rel="noreferrer">
+                      <a className="font-bold text-bushiri-primary transition hover:-translate-y-px focus-visible:-translate-y-px" href={row.url} target="_blank" rel="noreferrer">
                         원문 열기
                       </a>
                     ) : null}

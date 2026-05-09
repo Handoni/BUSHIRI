@@ -58,7 +58,8 @@ describe('AppShell authentication controls', () => {
       </AppShell>,
     )
 
-    expect(markup).toContain('관리자: simgip')
+    expect(markup).toContain('Admin')
+    expect(markup).toContain('simgip')
     expect(markup).toContain('로그아웃')
     expect(markup).toContain('원문 검수')
     expect(markup).toContain('소스 설정')
@@ -79,12 +80,12 @@ describe('AppShell authentication controls', () => {
     expect(markup).toContain('관리자 계정 정보를 확인해 주세요.')
   })
 
-  it('uses Radix sidebar navigation primitives and exposes a collapse control', () => {
+  it('uses Radix top navigation primitives without sidebar collapse controls', () => {
     expect(appShellSource).toContain("@radix-ui/react-navigation-menu")
-    expect(appShellSource).toContain("@radix-ui/react-collapsible")
+    expect(appShellSource).not.toContain("@radix-ui/react-collapsible")
     expect(appShellSource).toContain('<NavigationMenu.Root')
-    expect(appShellSource).toContain('<Collapsible.Root')
-    expect(appShellSource).toContain('메뉴 접기')
-    expect(appShellSource).toContain('메뉴 펼치기')
+    expect(appShellSource).toContain('function TopNavigation')
+    expect(appShellSource).not.toContain('메뉴 접기')
+    expect(appShellSource).not.toContain('메뉴 펼치기')
   })
 })

@@ -39,11 +39,11 @@ describe('TodayPage market listing cards', () => {
     expect(source).toContain('isAiRecommended')
     expect(source).toContain('awardCardToneClass')
     expect(source).toContain('awardBadges')
-    expect(source).toContain('bg-[#fff5c8]')
-    expect(source).toContain('bg-[#eaf5ff]')
-    expect(source).toContain('bg-[#edf9ed]')
-    expect(source).toContain('radial-gradient(circle_at_12%_18%,rgba(255,225,138,0.92)')
-    expect(source).toContain('linear-gradient(135deg,#fff9df_0%,#eefaf0_48%,#edf7ff_100%)')
+    expect(source).toContain('bg-bushiri-award-ai/45')
+    expect(source).toContain('bg-bushiri-award-low/70')
+    expect(source).toContain('bg-bushiri-award-best/70')
+    expect(source).toContain('award-tone-ai-low-best')
+    expect(source).toContain('award-tone-low-best')
     expect(source).toContain('absolute right-1 top-1')
     expect(source).toContain('flex-wrap')
     expect(source).toContain('AI추천')
@@ -65,6 +65,11 @@ describe('TodayPage market listing cards', () => {
     expect(source).not.toContain('등록 없음')
     expect(source).not.toContain('>—</')
     expect(source).toContain('empty-market-cell')
+  })
+
+  it('keeps the desktop price board fitted within the viewport without horizontal scrolling', () => {
+    expect(source).toContain('overflow-y-auto overflow-x-hidden')
+    expect(source).not.toContain('min-w-[940px]')
   })
 
   it('keeps the condition panel limited to date, species search, and sold-out filtering', () => {
