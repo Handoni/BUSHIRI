@@ -11,7 +11,7 @@ type RawPostState = {
 }
 
 function createFakeDb(rawPostId: number) {
-  const snapshots: Array<Record<string, unknown>> = []
+  const snapshots: Array<{ boundValues: Array<string | number | null> }> = []
   const rawPostState: RawPostState = {
     id: rawPostId,
     parse_status: 'pending',
@@ -67,6 +67,8 @@ describe('parseRawPostAndSave', () => {
               canonicalName: vendorName === '줄포상회' ? '킹크랩' : '광어',
               displayName: vendorName === '줄포상회' ? '블루 킹크랩' : '광어',
               origin: vendorName === '줄포상회' ? '러시아' : '국내산',
+              originCountry: vendorName === '줄포상회' ? '러시아' : '국내산',
+              originDetail: null,
               productionType: null,
               freshnessState: null,
               grade: null,
@@ -106,5 +108,59 @@ describe('parseRawPostAndSave', () => {
       expect(rawPostState.parse_status).toBe('parsed')
       expect(rawPostState.parse_error).toBeNull()
     }
+  })
+
+  it('stores origin compatibility, country, and detail as separate snapshot fields', async () => {
+    const { db, snapshots, rawPostState } = createFakeDb(1)
+    const llmClient: MarketLlmClient = {
+      async parseMarketPost() {
+        return {
+          vendorName: '참조은수산',
+          marketDate: '2026-05-09',
+          categoryHint: 'fish',
+          warnings: [],
+          items: [
+            {
+              category: 'fish',
+              canonicalName: '광어',
+              displayName: '광어',
+              origin: '국내산',
+              originCountry: '국내산',
+              originDetail: '낚시바리',
+              productionType: '자연산',
+              freshnessState: null,
+              grade: null,
+              sizeMinKg: 2,
+              sizeMaxKg: 3,
+              unit: 'kg',
+              pricePerKg: 32000,
+              priceText: '32,000원',
+              soldOut: false,
+              eventFlag: false,
+              halfAvailable: false,
+              notes: null,
+              confidence: 0.95
+            }
+          ]
+        }
+      }
+    }
+
+    const result = await parseRawPostAndSave(
+      db,
+      {
+        id: 1,
+        sourceId: 10,
+        vendorName: '참조은수산',
+        rawContentMasked: '국내산 낚시바리 자연산 광어 2~3kg 32,000원',
+        postedAt: '2026-05-09T00:00:00.000Z'
+      },
+      llmClient
+    )
+
+    expect(result).toEqual({ status: 'parsed', itemsSaved: 1 })
+    expect(rawPostState.parse_status).toBe('parsed')
+    expect(snapshots).toHaveLength(1)
+    expect(snapshots[0].boundValues.slice(6, 9)).toEqual(['국내산', '국내산', '낚시바리'])
   })
 })

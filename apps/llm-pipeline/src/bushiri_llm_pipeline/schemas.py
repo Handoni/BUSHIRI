@@ -18,6 +18,8 @@ class ParsedMarketItem(BaseModel):
     canonicalName: str | None
     displayName: str
     origin: str | None
+    originCountry: str | None
+    originDetail: str | None
     productionType: str | None
     freshnessState: str | None
     grade: str | None

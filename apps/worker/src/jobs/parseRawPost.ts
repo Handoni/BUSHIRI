@@ -2,6 +2,7 @@ import type { D1DatabaseBinding } from '../env'
 import { extractMarketText } from '../lib/textSection'
 import type { MarketLlmClient } from '../clients/llmClient'
 import type { ParsedMarketItem, ParsedMarketPost } from '../types/llm'
+import { normalizeOriginFields } from './normalizeItems'
 
 type RawPostForParsing = {
   id: number
@@ -44,6 +45,8 @@ function validateParsedItem(value: unknown): ParsedMarketItem {
     canonicalName: nullableString(value.canonicalName),
     displayName: value.displayName,
     origin: nullableString(value.origin),
+    originCountry: nullableString(value.originCountry),
+    originDetail: nullableString(value.originDetail),
     productionType: nullableString(value.productionType),
     freshnessState: nullableString(value.freshnessState),
     grade: nullableString(value.grade),
@@ -82,6 +85,8 @@ async function markRawPost(db: D1DatabaseBinding, rawPostId: number, status: 'pa
 }
 
 async function saveSnapshot(db: D1DatabaseBinding, rawPost: RawPostForParsing, marketDate: string, item: ParsedMarketItem): Promise<void> {
+  const originFields = normalizeOriginFields(item)
+
   await db
     .prepare(
       `INSERT INTO item_snapshots (
@@ -92,6 +97,8 @@ async function saveSnapshot(db: D1DatabaseBinding, rawPost: RawPostForParsing, m
          canonical_name,
          display_name,
          origin,
+         origin_country,
+         origin_detail,
          production_type,
          freshness_state,
          grade,
@@ -106,7 +113,7 @@ async function saveSnapshot(db: D1DatabaseBinding, rawPost: RawPostForParsing, m
          notes,
          confidence,
          llm_raw_json
-       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)`
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)`
     )
     .bind(
       rawPost.id,
@@ -115,7 +122,9 @@ async function saveSnapshot(db: D1DatabaseBinding, rawPost: RawPostForParsing, m
       item.category,
       item.canonicalName,
       item.displayName,
-      item.origin,
+      originFields.origin,
+      originFields.originCountry,
+      originFields.originDetail,
       item.productionType,
       item.freshnessState,
       item.grade,
@@ -129,7 +138,12 @@ async function saveSnapshot(db: D1DatabaseBinding, rawPost: RawPostForParsing, m
       item.halfAvailable ? 1 : 0,
       item.notes,
       item.confidence,
-      JSON.stringify(item)
+      JSON.stringify({
+        ...item,
+        origin: originFields.origin,
+        originCountry: originFields.originCountry,
+        originDetail: originFields.originDetail
+      })
     )
     .run()
 }

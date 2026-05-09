@@ -175,13 +175,13 @@ describe('buildTodayBoard', () => {
     expect(board.rows[0].cells['성전물산']).toHaveLength(1)
     expect(board.rows[0].cells['성전물산'][0]).toMatchObject({
       price: 33000,
-      variantLabel: '국내산 · 자연산 · 활어 · 1.7~2kg',
+      variantLabel: '국내산 · 자연산 · 활어',
       weightLabel: '1.7~2kg',
-      statusTags: ['국내산', '자연산', '활어', '1.7~2kg'],
+      statusTags: ['국내산', '자연산', '활어'],
     })
   })
 
-  it('stacks the same vendor species into price-sorted cards when structured fields differ', () => {
+  it('separates same species rows by country and origin detail', () => {
     const board = buildTodayBoard([
       {
         id: '1',
@@ -227,13 +227,11 @@ describe('buildTodayBoard', () => {
       },
     ])
 
-    expect(board.rows).toHaveLength(1)
-    expect(board.rows[0].speciesLabel).toBe('가리비')
-    expect(board.rows[0].cells['줄포상회'].map((listing) => listing.price)).toEqual([
-      9000,
-      27000,
-    ])
-    const [domesticScallop, japanScallop] = board.rows[0].cells['줄포상회']
+    expect(board.rows).toHaveLength(2)
+    expect(board.rows.map((row) => row.speciesLabel)).toEqual(['가리비', '가리비'])
+
+    const japanScallop = board.rows.find((row) => row.cells['줄포상회'][0]?.price === 27000)?.cells['줄포상회'][0]
+    const domesticScallop = board.rows.find((row) => row.cells['줄포상회'][0]?.price === 9000)?.cells['줄포상회'][0]
 
     expect(japanScallop).toMatchObject({
       price: 27000,
@@ -360,7 +358,8 @@ describe('buildTodayBoard', () => {
       vendor: '참조은수산',
       listing: {
         price: 25000,
-        statusTags: ['국내산', '0.8~1kg'],
+        statusTags: ['국내산'],
+        weightLabel: '0.8~1kg',
       },
     })
   })

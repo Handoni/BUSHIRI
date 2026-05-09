@@ -2,6 +2,7 @@ export type TodayBoardListing = {
   price: number | null
   variantLabel: string
   weightLabel: string
+  halfAvailable: boolean
   statusTags: string[]
   isBestCondition: boolean
   isLowestPrice: boolean
@@ -13,6 +14,7 @@ export type TodayBoardRow = {
   key: string
   canonicalName: string
   speciesLabel: string
+  speciesOriginLabel: string | null
   cells: Record<string, TodayBoardListing[]>
 }
 
@@ -166,22 +168,11 @@ function structuredTags(
   splitGrade(raw.grade).forEach((grade) => pushUnique(tags, grade))
   descriptorTags(row, raw).forEach((tag) => pushUnique(tags, tag))
 
-  if (raw.halfAvailable === true) {
-    pushUnique(tags, '반반')
-  }
-
   return tags
 }
 
 function statusTags(row: BoardInputRow, raw: Record<string, unknown>): string[] {
-  const tags = structuredTags(row, raw, { includeFlags: true })
-  const weight = formatWeight(raw)
-
-  if (weight !== '중량 미상') {
-    pushUnique(tags, weight)
-  }
-
-  return tags
+  return structuredTags(row, raw, { includeFlags: true })
 }
 
 function variantTags(row: BoardInputRow, raw: Record<string, unknown>): string[] {
@@ -189,12 +180,7 @@ function variantTags(row: BoardInputRow, raw: Record<string, unknown>): string[]
 }
 
 function formatVariantLabel(raw: Record<string, unknown>, tags: string[]): string {
-  const weight = formatWeight(raw)
   const parts = [...tags]
-
-  if (weight !== '중량 미상') {
-    parts.push(weight)
-  }
 
   return parts.length > 0 ? parts.join(' · ') : '기본'
 }
@@ -300,6 +286,13 @@ function pushUniqueValue(values: string[], value: string) {
   }
 }
 
+function speciesRowKey(row: BoardInputRow, raw: Record<string, unknown>): string {
+  const originCountry = stringValue(raw.originCountry) ?? stringValue(raw.origin) ?? 'origin-unknown'
+  const originDetail = stringValue(raw.originDetail) ?? 'detail-none'
+
+  return `${row.canonicalName}|${originCountry}|${originDetail}`
+}
+
 function vendorColumnsForSection(section: WorkingSection): string[] {
   const config = sectionConfigByKey.get(section.key)
   const preferred = config?.vendorOrder ?? []
@@ -364,29 +357,30 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
     const tags = variantTags(row, raw)
     const sectionKey = sectionKeyForSource(row.source)
     const section = workingSections.get(sectionKey) ?? createWorkingSection(sectionKey)
-    const rowKey = row.canonicalName
+    const rowKey = speciesRowKey(row, raw)
 
     workingSections.set(sectionKey, section)
     pushUniqueValue(section.vendorsInData, row.source)
 
     const vendorSpecies = section.speciesByVendor.get(row.source) ?? []
-    pushUniqueValue(vendorSpecies, row.canonicalName)
+    pushUniqueValue(vendorSpecies, rowKey)
     section.speciesByVendor.set(row.source, vendorSpecies)
 
-    if (!section.firstSeenOrder.has(row.canonicalName)) {
-      section.firstSeenOrder.set(row.canonicalName, rowIndex)
+    if (!section.firstSeenOrder.has(rowKey)) {
+      section.firstSeenOrder.set(rowKey, rowIndex)
     }
 
-    if (!section.rowsBySpecies.has(row.canonicalName)) {
-      section.rowsBySpecies.set(row.canonicalName, {
+    if (!section.rowsBySpecies.has(rowKey)) {
+      section.rowsBySpecies.set(rowKey, {
         key: `${sectionKey}-${rowKey}`,
         canonicalName: row.canonicalName,
         speciesLabel: row.canonicalName,
+        speciesOriginLabel: stringValue(raw.originDetail),
         cells: {},
       })
     }
 
-    const target = section.rowsBySpecies.get(row.canonicalName)
+    const target = section.rowsBySpecies.get(rowKey)
 
     if (!target) {
       return
@@ -398,6 +392,7 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
       price: row.price,
       variantLabel: formatVariantLabel(raw, tags),
       weightLabel: formatWeight(raw),
+      halfAvailable: raw.halfAvailable === true,
       statusTags: statusTags(row, raw),
       isBestCondition: raw.bestCondition === true,
       isLowestPrice: raw.lowestPrice === true,

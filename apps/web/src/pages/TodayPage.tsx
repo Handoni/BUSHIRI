@@ -22,6 +22,7 @@ import {
   Panel,
   SearchCombobox,
   SegmentedControl,
+  SelectControl,
   ToggleSwitch,
   cn,
 } from '../components/ui'
@@ -36,6 +37,7 @@ type TodayBoardUrlState = {
   sectionKey: TodayBoardSectionKey
   selectedDate: string
   query: string
+  country: string
 }
 
 function parseBoardSection(value: string | null): TodayBoardSectionKey {
@@ -50,6 +52,7 @@ function readTodayBoardUrlState(): TodayBoardUrlState {
       sectionKey: DEFAULT_BOARD_SECTION,
       selectedDate: formatRelativeDateInput(),
       query: '',
+      country: 'all',
     }
   }
 
@@ -60,6 +63,7 @@ function readTodayBoardUrlState(): TodayBoardUrlState {
     sectionKey: parseBoardSection(searchParams.get('section')),
     selectedDate,
     query: searchParams.get('q') ?? '',
+    country: searchParams.get('country')?.trim() || 'all',
   }
 }
 
@@ -67,6 +71,7 @@ function replaceTodayBoardUrlState({
   sectionKey,
   selectedDate,
   query,
+  country,
 }: TodayBoardUrlState) {
   if (typeof window === 'undefined') {
     return
@@ -88,7 +93,27 @@ function replaceTodayBoardUrlState({
     searchParams.delete('q')
   }
 
+  if (country && country !== 'all') {
+    searchParams.set('country', country)
+  } else {
+    searchParams.delete('country')
+  }
+
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
+  국내산: '🇰🇷',
+  일본산: '🇯🇵',
+  중국산: '🇨🇳',
+  노르웨이: '🇳🇴',
+  러시아: '🇷🇺',
+}
+
+const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아']
+
+function countryLabel(country: string) {
+  return `${COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
 }
 
 function badgeTone(tag: string) {
@@ -175,11 +200,13 @@ function MarketListingCard({
 }) {
   const hasAwardTone = listing.isAiRecommended || listing.isLowestPrice || listing.isBestCondition
   const badges = awardBadges(listing)
+  const hasWeightLabel = listing.weightLabel !== '중량 미상'
 
   return (
     <article
       className={cn(
-        'relative flex min-h-24 min-w-0 flex-col gap-2 rounded-md border border-[rgba(20,21,18,0.08)] p-3 transition duration-150 hover:border-[#174f49]/20',
+        'relative flex min-h-24 min-w-0 flex-col gap-2 overflow-hidden rounded-md border border-[rgba(20,21,18,0.08)] p-2 transition duration-150 hover:border-[#174f49]/20 lg:p-3',
+        badges.length > 0 ? 'pt-7' : '',
         !hasAwardTone && listing.statusTags.includes('품절') ? 'bg-[#8c3f3d]/10 hover:bg-[#8c3f3d]/15' : '',
         !hasAwardTone && listing.statusTags.includes('이벤트') ? 'bg-[#174f49]/10 hover:bg-[#174f49]/15' : '',
         !hasAwardTone && !listing.statusTags.includes('품절') && !listing.statusTags.includes('이벤트')
@@ -189,11 +216,11 @@ function MarketListingCard({
       )}
     >
       {badges.length > 0 ? (
-        <div className="pointer-events-none absolute -right-2 -top-2 z-10 flex flex-row-reverse items-center justify-start gap-1 whitespace-nowrap">
+        <div className="pointer-events-none absolute right-1 top-1 z-10 flex max-w-[calc(100%-0.5rem)] flex-wrap items-start justify-end gap-0.5">
           {badges.map((badge) => (
             <span
               className={cn(
-                'shrink-0 rounded-full border px-2 py-1 text-[0.68rem] font-extrabold leading-none shadow-[0_1px_0_rgba(255,255,255,0.6)]',
+                'min-w-0 rounded-full border px-1.5 py-0.5 text-[0.62rem] font-extrabold leading-none shadow-[0_1px_0_rgba(255,255,255,0.6)]',
                 badge.className,
               )}
               key={`${rowKey}-${vendor}-${listingIndex}-${badge.label}`}
@@ -203,9 +230,21 @@ function MarketListingCard({
           ))}
         </div>
       ) : null}
-      <strong className="font-mono text-[1.34rem] font-extrabold leading-none tracking-normal text-[#141512] tabular-nums">
-        {formatCurrency(listing.price)}
-      </strong>
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
+        <strong className="font-mono text-[1.02rem] font-extrabold leading-none tracking-normal text-[#141512] tabular-nums [overflow-wrap:anywhere] lg:text-[1.18rem] xl:text-[1.34rem]">
+          {formatCurrency(listing.price)}
+        </strong>
+        {hasWeightLabel ? (
+          <span className="text-[0.72rem] font-extrabold leading-none text-[#676b63]">
+            {listing.weightLabel}
+          </span>
+        ) : null}
+        {listing.halfAvailable ? (
+          <span className="text-[0.72rem] font-extrabold leading-none text-[#174f49]">
+            (반반)
+          </span>
+        ) : null}
+      </div>
       {listing.statusTags.length > 0 ? (
         <div className="mt-auto flex flex-wrap gap-1">
           {listing.statusTags.map((tag) => (
@@ -227,7 +266,7 @@ export function TodayPage() {
   const [expandedSpeciesKeys, setExpandedSpeciesKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
-  const { sectionKey: activeSection, selectedDate, query } = urlState
+  const { sectionKey: activeSection, selectedDate, query, country } = urlState
   const requestedDate = selectedDate.trim() || undefined
   const market = useResource(() => getTodayMarket(requestedDate), [requestedDate])
 
@@ -248,6 +287,41 @@ export function TodayPage() {
       .filter(Boolean)
       .sort((left, right) => left.localeCompare(right, 'ko'))
   }, [marketRows])
+  const countryOptions = useMemo(() => {
+    const countries = Array.from(
+      new Set(
+        marketRows
+          .map((row) => {
+            const raw =
+              typeof row.raw === 'object' && row.raw !== null
+                ? (row.raw as Record<string, unknown>)
+                : null
+            const originCountry = raw?.originCountry
+
+            if (typeof originCountry === 'string' && originCountry.trim()) {
+              return originCountry.trim()
+            }
+
+            return typeof row.market === 'string' && row.market.trim() ? row.market.trim() : null
+          })
+          .filter((value): value is string => value !== null),
+      ),
+    )
+    const orderedCountries = [
+      ...COUNTRY_ORDER.filter((knownCountry) => countries.includes(knownCountry)),
+      ...countries
+        .filter((countryName) => !COUNTRY_ORDER.includes(countryName))
+        .sort((left, right) => left.localeCompare(right, 'ko')),
+    ]
+
+    return [
+      { value: 'all', label: '전체' },
+      ...orderedCountries.map((countryName) => ({
+        value: countryName,
+        label: countryLabel(countryName),
+      })),
+    ]
+  }, [marketRows])
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -261,13 +335,19 @@ export function TodayPage() {
           ? (row.raw as Record<string, unknown>)
           : null
       const soldOut = raw?.soldOut === true
+      const originCountry =
+        typeof raw?.originCountry === 'string' && raw.originCountry.trim()
+          ? raw.originCountry.trim()
+          : row.market
+      const matchesCountry = country === 'all' || originCountry === country
 
       return (
         matchesQuery &&
+        matchesCountry &&
         (!excludeSoldOut || !soldOut)
       )
     })
-  }, [excludeSoldOut, marketRows, query])
+  }, [country, excludeSoldOut, marketRows, query])
 
   const board = useMemo(() => buildTodayBoard(filteredRows), [filteredRows])
   const visibleSections = useMemo(
@@ -315,6 +395,11 @@ export function TodayPage() {
     updateUrlState({ query })
   }
 
+  const updateCountry = (country: string) => {
+    setExpandedSpeciesKeys(new Set())
+    updateUrlState({ country })
+  }
+
   const toggleSpecies = (key: string) => {
     setExpandedSpeciesKeys((currentKeys) => {
       const nextKeys = new Set(currentKeys)
@@ -336,7 +421,7 @@ export function TodayPage() {
         actions={<Button onClick={() => void market.refresh()}>시세 다시 불러오기</Button>}
         className="py-4"
       >
-        <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)_minmax(0,0.8fr)] items-end gap-2.5 max-lg:grid-cols-3 max-md:grid-cols-1">
+        <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.8fr)] items-end gap-2.5 max-xl:grid-cols-3 max-md:grid-cols-1">
           <LabeledField label="기준일">
             <input
               className={inputClass}
@@ -356,6 +441,28 @@ export function TodayPage() {
               placeholder="예: 광어, 대게"
               value={query}
               onChange={updateQuery}
+            />
+          </LabeledField>
+
+          <LabeledField label="분류" as="div">
+            <SegmentedControl
+              ariaLabel="시세판 섹션 선택"
+              items={board.sections.map((section) => ({
+                value: section.key,
+                label: section.label,
+                detail: formatNumber(section.rows.length),
+              }))}
+              value={activeSection}
+              onChange={(sectionKey) => setSelectedSection(sectionKey as TodayBoardSectionKey)}
+            />
+          </LabeledField>
+
+          <LabeledField label="국가" as="div">
+            <SelectControl
+              ariaLabel="국가 선택"
+              options={countryOptions}
+              value={country}
+              onChange={updateCountry}
             />
           </LabeledField>
 
@@ -382,18 +489,6 @@ export function TodayPage() {
         ) : null}
         {!market.isLoading && !market.error ? (
           <>
-            <SegmentedControl
-              ariaLabel="시세판 섹션 선택"
-              className="mb-4"
-              items={board.sections.map((section) => ({
-                value: section.key,
-                label: section.label,
-                detail: formatNumber(section.rows.length),
-              }))}
-              value={activeSection}
-              onChange={(sectionKey) => setSelectedSection(sectionKey as TodayBoardSectionKey)}
-            />
-
             {visibleRows.length === 0 ? (
               <EmptyState
                 title={emptyState.title}
@@ -412,23 +507,23 @@ export function TodayPage() {
                     </span>
                   </header>
 
-                  <div className="hidden max-h-[min(72dvh,760px)] overflow-auto rounded-lg border border-[rgba(20,21,18,0.12)] bg-[#fffefa]/95 md:block">
-                    <table className="w-full min-w-[940px] table-fixed border-separate border-spacing-0 text-left">
+                  <div className="hidden min-w-0 max-h-[min(72dvh,760px)] overflow-y-auto overflow-x-hidden rounded-lg border border-[rgba(20,21,18,0.12)] bg-[#fffefa]/95 md:block">
+                    <table className="w-full table-fixed border-separate border-spacing-0 text-left">
                       <colgroup>
-                        <col className="w-[92px]" />
+                        <col className="w-[72px] lg:w-[92px]" />
                         {section.vendorColumns.map((vendor) => (
                           <col key={vendor} />
                         ))}
                       </colgroup>
                       <thead>
                         <tr>
-                          <th className="sticky top-0 z-[3] border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2] px-4 py-3 text-[0.76rem] font-bold uppercase tracking-normal text-[#676b63]">
+                          <th className="sticky top-0 z-[3] border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2] px-2 py-3 text-[0.72rem] font-bold uppercase tracking-normal text-[#676b63] lg:px-4 lg:text-[0.76rem]">
                             어종
                           </th>
                           {section.vendorColumns.map((vendor) => (
                             <th
                               key={vendor}
-                              className="sticky top-0 z-[3] border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2] p-3 text-[0.84rem] font-bold tracking-normal text-[#1a1d18] last:border-r-0"
+                              className="sticky top-0 z-[3] border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2] p-2 text-[0.76rem] font-bold tracking-normal text-[#1a1d18] [overflow-wrap:anywhere] last:border-r-0 lg:p-3 lg:text-[0.84rem]"
                               title={vendor}
                               aria-label={vendor}
                             >
@@ -440,9 +535,14 @@ export function TodayPage() {
                       <tbody>
                         {section.rows.map((row) => (
                           <tr key={row.key} className="align-top">
-                            <th scope="row" className="border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2]/90 p-3 align-middle last:border-b-0">
-                              <strong className="block text-[0.98rem] font-bold leading-tight text-[#141512] [word-break:keep-all]">
-                                {row.speciesLabel}
+                            <th scope="row" className="border-r border-b border-[rgba(20,21,18,0.12)] bg-[#f7f7f2]/90 p-2 align-middle last:border-b-0 lg:p-3">
+                              <strong className="block text-[0.84rem] font-bold leading-tight text-[#141512] [overflow-wrap:anywhere] lg:text-[0.98rem]">
+                                <span className="block">{row.speciesLabel}</span>
+                                {row.speciesOriginLabel ? (
+                                  <span className="mt-1 block text-[0.72rem] font-extrabold text-[#676b63] lg:text-[0.8rem]">
+                                    ({row.speciesOriginLabel})
+                                  </span>
+                                ) : null}
                               </strong>
                             </th>
                             {section.vendorColumns.map((vendor) => {
@@ -459,7 +559,7 @@ export function TodayPage() {
                                   )}
                                 >
                                   {listings.length > 0 ? (
-                                    <div className="flex min-h-28 flex-col gap-2 bg-[#fffefa]/60 p-2">
+                                    <div className="flex min-h-28 min-w-0 flex-col gap-2 bg-[#fffefa]/60 p-1.5 lg:p-2">
                                       {listings.map((listing, listingIndex) => (
                                         <MarketListingCard
                                           key={`${row.key}-${vendor}-${listing.variantLabel}-${listingIndex}`}
@@ -508,7 +608,14 @@ export function TodayPage() {
                             onClick={() => toggleSpecies(row.key)}
                             type="button"
                           >
-                            <span className="font-extrabold leading-tight [word-break:keep-all]">{row.speciesLabel}</span>
+                            <span className="font-extrabold leading-tight [word-break:keep-all]">
+                              <span className="block">{row.speciesLabel}</span>
+                              {row.speciesOriginLabel ? (
+                                <span className="mt-1 block text-[0.72rem] text-[#676b63]">
+                                  ({row.speciesOriginLabel})
+                                </span>
+                              ) : null}
+                            </span>
                             <span className="flex min-w-0 flex-wrap items-baseline gap-2">
                               {lowest ? (
                                 <>
@@ -518,6 +625,16 @@ export function TodayPage() {
                                   <strong className="font-mono text-lg font-extrabold leading-none text-[#141512] tabular-nums">
                                     {formatCurrency(lowest.listing.price)}
                                   </strong>
+                                  {lowest.listing.weightLabel !== '중량 미상' ? (
+                                    <span className="text-[0.72rem] font-extrabold text-[#676b63]">
+                                      {lowest.listing.weightLabel}
+                                    </span>
+                                  ) : null}
+                                  {lowest.listing.halfAvailable ? (
+                                    <span className="text-[0.72rem] font-extrabold text-[#174f49]">
+                                      (반반)
+                                    </span>
+                                  ) : null}
                                 </>
                               ) : (
                                 <span className="block min-h-6 min-w-24 rounded bg-[rgba(20,21,18,0.07)]" aria-hidden="true" />

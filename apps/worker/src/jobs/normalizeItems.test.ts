@@ -50,6 +50,9 @@ describe('status and alias normalization', () => {
 
   it('normalizes origins and compare keys', () => {
     expect(normalizeOrigin('제주')).toBe('국내산')
+    expect(normalizeOrigin('거제')).toBe('국내산')
+    expect(normalizeOrigin('마가단산')).toBe('러시아')
+    expect(normalizeOrigin('러시아/노르웨이/일본')).toBeNull()
     expect(normalizeOrigin('일본산')).toBe('일본산')
     expect(detectEventFlag('황금광어 이벤트 특가')).toBe(true)
     expect(
@@ -74,6 +77,8 @@ describe('normalizeParsedItem', () => {
       canonicalName: null,
       displayName: '제주광어',
       origin: '제주',
+      originCountry: null,
+      originDetail: null,
       productionType: '자연산',
       freshnessState: null,
       grade: null,
@@ -92,9 +97,95 @@ describe('normalizeParsedItem', () => {
     expect(normalizeParsedItem(item, { priceNotation: 'manwon', vendorName: '성전물산', aliases })).toMatchObject({
       canonicalName: '광어',
       origin: '국내산',
+      originCountry: '국내산',
+      originDetail: '자연산',
       pricePerKg: 48000,
       eventFlag: true,
       compareKey: '광어|국내산|자연산|unknown|event|2~3kg'
+    })
+  })
+
+  it('keeps country and origin detail separate using priority rules', () => {
+    const farmedJeju: ParsedMarketItem = {
+      category: 'fish',
+      canonicalName: '광어',
+      displayName: '광어',
+      origin: '제주산',
+      originCountry: null,
+      originDetail: null,
+      productionType: '양식',
+      freshnessState: null,
+      grade: null,
+      sizeMinKg: null,
+      sizeMaxKg: null,
+      unit: 'kg',
+      pricePerKg: 28000,
+      priceText: '28,000원',
+      soldOut: false,
+      eventFlag: false,
+      halfAvailable: false,
+      notes: null,
+      confidence: 0.9
+    }
+    const lineCaughtWild: ParsedMarketItem = {
+      ...farmedJeju,
+      displayName: '국내산 낚시바리 광어',
+      origin: '국내산',
+      originCountry: '국내산',
+      originDetail: null,
+      productionType: '자연산',
+      grade: '낚시바리'
+    }
+    const countryOnly: ParsedMarketItem = {
+      ...farmedJeju,
+      displayName: '일본산 참돔',
+      canonicalName: '참돔',
+      origin: '일본산',
+      originCountry: null,
+      originDetail: null,
+      productionType: null
+    }
+    const regionalDomestic: ParsedMarketItem = {
+      ...farmedJeju,
+      displayName: '보리숭어',
+      canonicalName: '보리숭어',
+      origin: '거제',
+      originCountry: null,
+      originDetail: null,
+      productionType: null
+    }
+    const detailOnlyRegion: ParsedMarketItem = {
+      ...farmedJeju,
+      origin: null,
+      originCountry: null,
+      originDetail: '완도산',
+      productionType: null
+    }
+
+    expect(normalizeParsedItem(farmedJeju, { priceNotation: 'won', vendorName: '참조은수산', aliases })).toMatchObject({
+      origin: '국내산',
+      originCountry: '국내산',
+      originDetail: '제주산'
+    })
+    expect(normalizeParsedItem(lineCaughtWild, { priceNotation: 'won', vendorName: '참조은수산', aliases })).toMatchObject({
+      origin: '국내산',
+      originCountry: '국내산',
+      originDetail: '낚시바리'
+    })
+    expect(normalizeParsedItem(countryOnly, { priceNotation: 'won', vendorName: '참조은수산', aliases })).toMatchObject({
+      origin: '일본산',
+      originCountry: '일본산',
+      originDetail: null
+    })
+    expect(normalizeParsedItem(regionalDomestic, { priceNotation: 'won', vendorName: '윤호수산', aliases })).toMatchObject({
+      origin: '국내산',
+      originCountry: '국내산',
+      originDetail: '거제산'
+    })
+    expect(normalizeParsedItem(detailOnlyRegion, { priceNotation: 'won', vendorName: '윤호수산', aliases })).toMatchObject({
+      origin: '국내산',
+      originCountry: '국내산',
+      originDetail: '완도산'
     })
   })
 })
