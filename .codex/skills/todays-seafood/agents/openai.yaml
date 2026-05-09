@@ -1,0 +1,4 @@
+interface:
+  display_name: "오늘의 수산물"
+  short_description: "BAND 가격글을 브라우저 수동 수집해 운영 DB 업로드"
+  default_prompt: "Use $todays-seafood to manually collect text-only single-organism seafood price posts from every active BAND source in the browser, then upload them to the deployed BUSHIRI Worker and remote D1."
