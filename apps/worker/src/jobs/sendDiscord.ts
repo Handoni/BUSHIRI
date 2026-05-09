@@ -90,7 +90,7 @@ function buildHighlightLines(highlights: DailyDiscordHighlight[]): string[] {
 
 function buildWatchedLines(watchedSummaries: DailyDiscordWatchedSummary[]): string[] {
   if (watchedSummaries.length === 0) {
-    return ['- 오늘 시세에 잡힌 예의주시 품목이 없습니다.']
+    return ['- 오늘 시세에 잡힌 관심 품목이 없습니다.']
   }
 
   return watchedSummaries.map((item) => `- ${item.canonicalName}: ${item.summary}`)
@@ -116,7 +116,7 @@ function buildSelectComponent(marketDate: string, candidates: DailyDiscordSelect
           type: 3,
           custom_id: `bushiri:watch:${marketDate}`,
           options,
-          placeholder: '예의주시할 품목을 선택하세요',
+          placeholder: '관심 품목을 선택하세요',
           min_values: 0,
           max_values: options.length
         }
@@ -138,7 +138,7 @@ export function buildDailyDiscordMessage(input: {
     '주목할 품목',
     ...buildHighlightLines(input.highlights),
     '',
-    '예의주시 품목',
+    '관심 품목',
     ...buildWatchedLines(input.watchedSummaries),
     '',
     `대시보드: ${input.dashboardUrl}`

@@ -348,7 +348,7 @@ describe('Discord interactions route', () => {
     await expect(response.json()).resolves.toMatchObject({ type: 7 })
   })
 
-  it('handles slash watch add, list, and remove commands', async () => {
+  it('handles Korean slash watch add, list, and remove commands', async () => {
     const state = createState()
     const env = createEnv(state)
 
@@ -357,18 +357,12 @@ describe('Discord interactions route', () => {
         type: 2,
         member: { user: { id: 'user-1' } },
         data: {
-          name: 'bushiri',
+          name: '관심',
           options: [
             {
-              name: 'watch',
-              type: 2,
-              options: [
-                {
-                  name: 'add',
-                  type: 1,
-                  options: [{ name: 'species', type: 3, value: '광어' }]
-                }
-              ]
+              name: '추가',
+              type: 1,
+              options: [{ name: '품목', type: 3, value: '광어' }]
             }
           ]
         }
@@ -383,8 +377,8 @@ describe('Discord interactions route', () => {
       createSignedRequest('https://example.com/api/discord/interactions', {
         type: 2,
         data: {
-          name: 'bushiri',
-          options: [{ name: 'watch', type: 2, options: [{ name: 'list', type: 1 }] }]
+          name: '관심',
+          options: [{ name: '목록', type: 1 }]
         }
       }),
       env
@@ -400,18 +394,12 @@ describe('Discord interactions route', () => {
       createSignedRequest('https://example.com/api/discord/interactions', {
         type: 2,
         data: {
-          name: 'bushiri',
+          name: '관심',
           options: [
             {
-              name: 'watch',
-              type: 2,
-              options: [
-                {
-                  name: 'remove',
-                  type: 1,
-                  options: [{ name: 'species', type: 3, value: '광어' }]
-                }
-              ]
+              name: '제거',
+              type: 1,
+              options: [{ name: '품목', type: 3, value: '광어' }]
             }
           ]
         }
@@ -423,7 +411,7 @@ describe('Discord interactions route', () => {
     expect(state.watchItems.some((item) => item.canonical_name === '광어')).toBe(false)
   })
 
-  it('handles slash channel set and current commands', async () => {
+  it('handles Korean slash channel set and current commands', async () => {
     const state = createState()
     state.alertChannel = null
     const env = createEnv(state)
@@ -435,8 +423,8 @@ describe('Discord interactions route', () => {
         channel_id: 'channel-2',
         member: { user: { id: 'user-2' } },
         data: {
-          name: 'bushiri',
-          options: [{ name: 'channel', type: 2, options: [{ name: 'set', type: 1 }] }]
+          name: '채널',
+          options: [{ name: '설정', type: 1 }]
         }
       }),
       env
@@ -453,8 +441,8 @@ describe('Discord interactions route', () => {
       createSignedRequest('https://example.com/api/discord/interactions', {
         type: 2,
         data: {
-          name: 'bushiri',
-          options: [{ name: 'channel', type: 2, options: [{ name: 'current', type: 1 }] }]
+          name: '채널',
+          options: [{ name: '확인', type: 1 }]
         }
       }),
       env
@@ -473,18 +461,12 @@ describe('Discord interactions route', () => {
       createSignedRequest('https://example.com/api/discord/interactions', {
         type: 4,
         data: {
-          name: 'bushiri',
+          name: '관심',
           options: [
             {
-              name: 'watch',
-              type: 2,
-              options: [
-                {
-                  name: 'add',
-                  type: 1,
-                  options: [{ name: 'species', type: 3, value: '품목', focused: true }]
-                }
-              ]
+              name: '추가',
+              type: 1,
+              options: [{ name: '품목', type: 3, value: '품목', focused: true }]
             }
           ]
         }

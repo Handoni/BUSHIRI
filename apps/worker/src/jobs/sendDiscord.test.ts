@@ -80,7 +80,7 @@ describe('buildDailyDiscordMessage', () => {
 
     expect(payload.content).toContain('2026-05-10')
     expect(payload.content).toContain('가격 하락')
-    expect(payload.content).toContain('예의주시')
+    expect(payload.content).toContain('관심')
     expect(payload.allowed_mentions).toEqual({ parse: [] })
     expect(payload.components?.[0]?.components?.[0]).toMatchObject({
       type: 3,

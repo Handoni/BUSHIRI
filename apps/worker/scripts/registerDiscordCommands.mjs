@@ -1,69 +1,66 @@
-const commandPayload = {
-  name: 'bushiri',
-  description: 'Manage BUSHIRI seafood market alerts',
-  type: 1,
-  integration_types: [0],
-  contexts: [0],
-  options: [
-    {
-      name: 'watch',
-      description: 'Manage watched seafood species',
-      type: 2,
-      options: [
-        {
-          name: 'add',
-          description: 'Add a species to the watchlist',
-          type: 1,
-          options: [
-            {
-              name: 'species',
-              description: 'Species name to watch',
-              type: 3,
-              required: true,
-              autocomplete: true
-            }
-          ]
-        },
-        {
-          name: 'remove',
-          description: 'Remove a species from the watchlist',
-          type: 1,
-          options: [
-            {
-              name: 'species',
-              description: 'Species name to stop watching',
-              type: 3,
-              required: true,
-              autocomplete: true
-            }
-          ]
-        },
-        {
-          name: 'list',
-          description: 'Show watched species',
-          type: 1
-        }
-      ]
-    },
-    {
-      name: 'channel',
-      description: 'Manage the Discord alert channel',
-      type: 2,
-      options: [
-        {
-          name: 'set',
-          description: 'Use this channel for BUSHIRI daily alerts',
-          type: 1
-        },
-        {
-          name: 'current',
-          description: 'Show the current BUSHIRI daily alert channel',
-          type: 1
-        }
-      ]
-    }
-  ]
-}
+const commandPayloads = [
+  {
+    name: '관심',
+    description: 'BUSHIRI 관심 품목을 관리합니다',
+    type: 1,
+    integration_types: [0],
+    contexts: [0],
+    options: [
+      {
+        name: '추가',
+        description: '관심 품목을 추가합니다',
+        type: 1,
+        options: [
+          {
+            name: '품목',
+            description: '관심 목록에 추가할 품목',
+            type: 3,
+            required: true,
+            autocomplete: true
+          }
+        ]
+      },
+      {
+        name: '제거',
+        description: '관심 품목을 제거합니다',
+        type: 1,
+        options: [
+          {
+            name: '품목',
+            description: '관심 목록에서 제거할 품목',
+            type: 3,
+            required: true,
+            autocomplete: true
+          }
+        ]
+      },
+      {
+        name: '목록',
+        description: '관심 품목 목록을 봅니다',
+        type: 1
+      }
+    ]
+  },
+  {
+    name: '채널',
+    description: 'BUSHIRI 알림 채널을 관리합니다',
+    type: 1,
+    integration_types: [0],
+    contexts: [0],
+    options: [
+      {
+        name: '설정',
+        description: '현재 채널을 BUSHIRI 알림방으로 설정합니다',
+        type: 1
+      },
+      {
+        name: '확인',
+        description: '현재 BUSHIRI 알림방을 확인합니다',
+        type: 1
+      }
+    ]
+  }
+]
 
 const applicationId = process.env.DISCORD_APPLICATION_ID
 const botToken = process.env.DISCORD_BOT_TOKEN
@@ -75,12 +72,12 @@ if (!applicationId || !botToken) {
 }
 
 const response = await fetch(`${apiBaseUrl}/applications/${encodeURIComponent(applicationId)}/commands`, {
-  method: 'POST',
+  method: 'PUT',
   headers: {
     Authorization: `Bot ${botToken}`,
     'Content-Type': 'application/json'
   },
-  body: JSON.stringify(commandPayload)
+  body: JSON.stringify(commandPayloads)
 })
 
 const body = await response.text()
@@ -90,5 +87,5 @@ if (!response.ok) {
   process.exit(1)
 }
 
-console.log(`Registered global /${commandPayload.name} command.`)
+console.log(`Registered ${commandPayloads.length} global BUSHIRI commands.`)
 console.log(body)

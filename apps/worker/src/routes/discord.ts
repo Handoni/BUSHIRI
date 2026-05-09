@@ -645,48 +645,43 @@ function flattenOptions(options: DiscordCommandOption[] = []): DiscordCommandOpt
   return options.flatMap((option) => [option, ...flattenOptions(option.options ?? [])])
 }
 
-function subcommandFromGroup(interaction: DiscordInteraction, groupName: string): DiscordCommandOption | null {
-  const group = interaction.data?.options?.find((option) => option.name === groupName)
-  return group?.options?.[0] ?? null
-}
-
-function watchSubcommand(interaction: DiscordInteraction): DiscordCommandOption | null {
-  return subcommandFromGroup(interaction, 'watch')
+function topLevelSubcommand(interaction: DiscordInteraction): DiscordCommandOption | null {
+  return interaction.data?.options?.[0] ?? null
 }
 
 function speciesFromSubcommand(subcommand: DiscordCommandOption | null): string | null {
-  const value = subcommand?.options?.find((option) => option.name === 'species')?.value
+  const value = subcommand?.options?.find((option) => option.name === '품목')?.value
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
 async function handleWatchCommand(interaction: DiscordInteraction, db: D1DatabaseBinding): Promise<Response> {
-  const subcommand = watchSubcommand(interaction)
+  const subcommand = topLevelSubcommand(interaction)
   const species = speciesFromSubcommand(subcommand)
   const userId = userIdFromInteraction(interaction)
 
-  if (subcommand?.name === 'add' && species) {
+  if (subcommand?.name === '추가' && species) {
     await upsertWatchItem(db, species, userId)
-    return interactionMessage(`${species} 예의주시 목록에 추가했습니다.`)
+    return interactionMessage(`${species} 관심 목록에 추가했습니다.`)
   }
 
-  if (subcommand?.name === 'remove' && species) {
+  if (subcommand?.name === '제거' && species) {
     await deleteWatchItem(db, species)
-    return interactionMessage(`${species} 예의주시 목록에서 제거했습니다.`)
+    return interactionMessage(`${species} 관심 목록에서 제거했습니다.`)
   }
 
-  if (subcommand?.name === 'list') {
+  if (subcommand?.name === '목록') {
     const watchItems = await listWatchItems(db)
     const names = watchItems.map((item) => item.canonicalName)
-    return interactionMessage(names.length > 0 ? `예의주시 품목: ${names.join(', ')}` : '예의주시 품목이 없습니다.')
+    return interactionMessage(names.length > 0 ? `관심 품목: ${names.join(', ')}` : '관심 품목이 없습니다.')
   }
 
-  return interactionMessage('지원하지 않는 watch 명령입니다.')
+  return interactionMessage('지원하지 않는 관심 명령입니다.')
 }
 
 async function handleChannelCommand(interaction: DiscordInteraction, db: D1DatabaseBinding): Promise<Response> {
-  const subcommand = subcommandFromGroup(interaction, 'channel')
+  const subcommand = topLevelSubcommand(interaction)
 
-  if (subcommand?.name === 'set') {
+  if (subcommand?.name === '설정') {
     if (!interaction.channel_id) {
       return interactionMessage('현재 Discord 채널을 확인하지 못했습니다.')
     }
@@ -700,16 +695,16 @@ async function handleChannelCommand(interaction: DiscordInteraction, db: D1Datab
     return interactionMessage(`<#${interaction.channel_id}> 채널을 BUSHIRI 알림방으로 설정했습니다.`)
   }
 
-  if (subcommand?.name === 'current') {
+  if (subcommand?.name === '확인') {
     const alertChannel = await getAlertChannel(db)
     return interactionMessage(
       alertChannel
         ? `현재 BUSHIRI 알림방: <#${alertChannel.channelId}>`
-        : '설정된 BUSHIRI 알림방이 없습니다. 알림방에서 `/bushiri channel set`을 실행하세요.'
+        : '설정된 BUSHIRI 알림방이 없습니다. 알림방에서 `/채널 설정`을 실행하세요.'
     )
   }
 
-  return interactionMessage('지원하지 않는 channel 명령입니다.')
+  return interactionMessage('지원하지 않는 채널 명령입니다.')
 }
 
 async function handleAutocomplete(interaction: DiscordInteraction, db: D1DatabaseBinding): Promise<Response> {
@@ -761,14 +756,12 @@ export async function handleDiscordInteraction(request: Request, env: Env | unde
     return handleAutocomplete(interaction, env.DB)
   }
 
-  if (interaction.type === 2 && interaction.data?.name === 'bushiri') {
-    const groupName = interaction.data.options?.[0]?.name
-
-    if (groupName === 'channel') {
-      return handleChannelCommand(interaction, env.DB)
-    }
-
+  if (interaction.type === 2 && interaction.data?.name === '관심') {
     return handleWatchCommand(interaction, env.DB)
+  }
+
+  if (interaction.type === 2 && interaction.data?.name === '채널') {
+    return handleChannelCommand(interaction, env.DB)
   }
 
   return interactionMessage('지원하지 않는 Discord interaction입니다.')
