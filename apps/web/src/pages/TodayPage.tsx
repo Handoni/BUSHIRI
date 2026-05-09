@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { getTodayMarket } from '../lib/api'
 import {
   buildTodayBoard,
@@ -279,9 +280,9 @@ function CountryMultiSelect({
         <span className="min-w-0 truncate">{selectedLabel}</span>
         <span
           aria-hidden="true"
-          className="shrink-0 text-xs font-extrabold text-bushiri-muted transition-transform group-open:rotate-180"
+          className="shrink-0 text-bushiri-muted transition-transform group-open:rotate-180"
         >
-          v
+          <ChevronDown className="h-4 w-4" strokeWidth={2.4} />
         </span>
       </summary>
       <div className="absolute left-0 top-[calc(100%+0.35rem)] z-50 grid max-h-72 w-full min-w-52 overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface p-1.5 shadow-bushiri-popover">
