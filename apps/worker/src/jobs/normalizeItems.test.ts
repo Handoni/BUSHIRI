@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { ParsedMarketItem } from '../types/llm'
 import { buildCompareKey, detectEventFlag, detectSoldOut, normalizeParsedItem, normalizeOrigin, parseWeightRange, resolveCanonicalName } from './normalizeItems'
@@ -5,7 +6,7 @@ import { parsePricePerKg } from '../lib/price'
 
 const aliases = [
   { alias: '제주광어', canonicalName: '광어' },
-  { alias: '황금광어', canonicalName: '광어' },
+  { alias: '황금광어', canonicalName: '황금광어' },
   { alias: '흑점줄전갱이', canonicalName: '시마아지' },
   { alias: '블루 킹크랩', canonicalName: '킹크랩' },
   { alias: '마가단 대게', canonicalName: '대게' }
@@ -42,10 +43,17 @@ describe('status and alias normalization', () => {
 
   it('resolves documented aliases', () => {
     expect(resolveCanonicalName('제주광어', aliases)).toBe('광어')
-    expect(resolveCanonicalName('황금광어', aliases)).toBe('광어')
+    expect(resolveCanonicalName('황금광어', aliases)).toBe('황금광어')
     expect(resolveCanonicalName('흑점줄전갱이', aliases)).toBe('시마아지')
     expect(resolveCanonicalName('블루 킹크랩', aliases)).toBe('킹크랩')
     expect(resolveCanonicalName('마가단 대게', aliases)).toBe('대게')
+  })
+
+  it('seeds 황금광어 as its own canonical species', () => {
+    const seedSql = readFileSync(new URL('../../migrations/0002_seed_aliases.sql', import.meta.url), 'utf8')
+
+    expect(seedSql).toContain("('fish', '황금광어', '황금광어')")
+    expect(seedSql).not.toContain("('fish', '광어', '황금광어')")
   })
 
   it('normalizes origins and compare keys', () => {
