@@ -24,6 +24,72 @@ export function formatCurrency(
   }).format(value)
 }
 
+function parseNumericPriceText(value: string): number | null {
+  const parsed = Number(value.replace(/,/g, '').replace(/[^0-9.-]/g, ''))
+
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function formatManwonValue(value: number | string | null | undefined) {
+  if (value == null) {
+    return null
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? (value / 10000).toFixed(1) : null
+  }
+
+  const normalized = value.trim()
+
+  if (!normalized) {
+    return null
+  }
+
+  const compacted = normalized.replace(/,/g, '')
+  const dottedWonMatch = compacted.match(/(\d+)\.(\d{3})(?=\s*원|[^0-9]|$)/)
+
+  if (dottedWonMatch) {
+    const parsed = Number(`${dottedWonMatch[1]}${dottedWonMatch[2]}`)
+
+    return Number.isFinite(parsed) ? (parsed / 10000).toFixed(1) : null
+  }
+
+  const parsed = parseNumericPriceText(normalized)
+
+  if (parsed === null) {
+    return null
+  }
+
+  const isWonText = /[₩원,]/.test(normalized) || Math.abs(parsed) >= 1000
+  const manwon = isWonText ? parsed / 10000 : parsed
+
+  return manwon.toFixed(1)
+}
+
+export function formatKgManwonPrice(value: number | string | null | undefined) {
+  const manwonValue = formatManwonValue(value)
+
+  return manwonValue === null ? '—' : `kg ${manwonValue}`
+}
+
+export function formatKgManwonPriceRange(
+  lowValue: number | string | null | undefined,
+  highValue: number | string | null | undefined,
+) {
+  const low = formatManwonValue(lowValue)
+  const high = formatManwonValue(highValue)
+
+  if (low === null || high === null) {
+    return '—'
+  }
+
+  if (low === high) {
+    return `kg ${low}`
+  }
+
+  return `kg ${low}~${high}`
+}
+
 export function formatDate(value: string | null | undefined) {
   if (!value) {
     return '—'

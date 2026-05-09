@@ -14,13 +14,13 @@ import {
   buildSpeciesOptions,
   buildTrendChartRows,
   buildTrendComparison,
-  filterSpeciesOptions,
   pickDefaultSpecies,
   type TrendReferenceBadge,
   type TrendSeries,
 } from '../lib/trends'
 import {
-  formatCurrency,
+  formatKgManwonPrice,
+  formatKgManwonPriceRange,
   formatNumber,
   formatPercent,
 } from '../lib/format'
@@ -38,28 +38,27 @@ import {
   MetricCard,
   MetricGrid,
   Panel,
+  SearchCombobox,
   SelectControl,
-  inputControlClass,
 } from '../components/ui'
 import { bushiriColors, trendChartColors } from '../lib/designSystem'
 
 const DAY_OPTIONS = [14, 30, 60, 90]
+const EMPTY_ORIGIN_VALUE = '__origin-empty__'
+const EMPTY_CLASSIFICATION_VALUE = '__classification-empty__'
+const UNKNOWN_ORIGIN_LABEL = '원산지 미상'
+const UNKNOWN_CLASSIFICATION_LABEL = '분류 미상'
+const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아']
+const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
+  국내산: '🇰🇷',
+  일본산: '🇯🇵',
+  중국산: '🇨🇳',
+  노르웨이: '🇳🇴',
+  러시아: '🇷🇺',
+}
 
 function getSeriesColor(index: number) {
   return trendChartColors[index % trendChartColors.length]
-}
-
-function compactWon(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) {
-    return '—'
-  }
-
-  if (value >= 10000) {
-    const manwon = value / 10000
-    return `${manwon % 1 === 0 ? manwon.toFixed(0) : manwon.toFixed(1)}만`
-  }
-
-  return formatNumber(value)
 }
 
 function formatTrendDate(value: string | null | undefined) {
@@ -84,6 +83,142 @@ function trendTone(value: number | null) {
   }
 
   return 'neutral' as const
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function getRawCandidate(raw: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    if (key in raw && raw[key] != null) {
+      return raw[key]
+    }
+  }
+
+  return null
+}
+
+function countryLabel(country: string) {
+  return `${COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
+}
+
+function originCountryForPoint(point: { raw: unknown }): string {
+  const raw = isRecord(point.raw) ? point.raw : {}
+
+  return (
+    stringValue(getRawCandidate(raw, ['originCountry', 'origin_country'])) ??
+    stringValue(getRawCandidate(raw, ['origin'])) ??
+    UNKNOWN_ORIGIN_LABEL
+  )
+}
+
+function classificationForPoint(point: { raw: unknown }): string {
+  const raw = isRecord(point.raw) ? point.raw : {}
+  const originDetail = stringValue(getRawCandidate(raw, ['originDetail', 'origin_detail']))
+
+  if (originDetail) {
+    return originDetail
+  }
+
+  const haystack = [
+    getRawCandidate(raw, ['displayName', 'display_name']),
+    getRawCandidate(raw, ['grade']),
+    getRawCandidate(raw, ['notes', 'description', 'detail']),
+  ]
+    .map(stringValue)
+    .filter((value): value is string => value !== null)
+    .join(' ')
+
+  if (haystack.includes('낚시바리')) {
+    return '낚시바리'
+  }
+
+  const productionType = stringValue(getRawCandidate(raw, ['productionType', 'production_type']))
+
+  if (productionType) {
+    return productionType
+  }
+
+  return UNKNOWN_CLASSIFICATION_LABEL
+}
+
+function originSortValue(origin: string) {
+  const knownIndex = COUNTRY_ORDER.indexOf(origin)
+
+  return knownIndex === -1 ? COUNTRY_ORDER.length : knownIndex
+}
+
+function classificationPriority(value: string) {
+  if (value === '낚시바리') {
+    return 0
+  }
+
+  if (value === '자연산') {
+    return 1
+  }
+
+  if (value.endsWith('산') && !COUNTRY_ORDER.includes(value)) {
+    return 2
+  }
+
+  if (value === '양식') {
+    return 3
+  }
+
+  if (value === UNKNOWN_CLASSIFICATION_LABEL) {
+    return 5
+  }
+
+  return 4
+}
+
+function buildOriginOptions(points: Array<{ raw: unknown }>) {
+  return Array.from(new Set(points.map(originCountryForPoint)))
+    .sort((left, right) => {
+      const leftOrder = originSortValue(left)
+      const rightOrder = originSortValue(right)
+
+      return leftOrder === rightOrder ? left.localeCompare(right, 'ko') : leftOrder - rightOrder
+    })
+    .map((origin) => ({
+      value: origin,
+      label: countryLabel(origin),
+    }))
+}
+
+function buildClassificationOptions(points: Array<{ raw: unknown }>) {
+  return Array.from(new Set(points.map(classificationForPoint)))
+    .sort((left, right) => {
+      const leftOrder = classificationPriority(left)
+      const rightOrder = classificationPriority(right)
+
+      return leftOrder === rightOrder ? left.localeCompare(right, 'ko') : leftOrder - rightOrder
+    })
+    .map((classification) => ({
+      value: classification,
+      label: classification,
+    }))
+}
+
+function resolveSelectedValue(
+  selectedValue: string,
+  options: Array<{ value: string }>,
+  emptyValue: string,
+) {
+  if (options.length === 0) {
+    return emptyValue
+  }
+
+  if (options.some((option) => option.value === selectedValue)) {
+    return selectedValue
+  }
+
+  return options[0]?.value ?? emptyValue
 }
 
 function TrendChartTooltip({
@@ -141,7 +276,7 @@ function TrendChartTooltip({
                 </strong>
               </span>
               <strong className="font-mono text-sm font-extrabold tabular-nums text-bushiri-ink">
-                {formatCurrency(value)}
+                {formatKgManwonPrice(value)}
               </strong>
             </div>
             <p className="m-0 text-[0.78rem] leading-snug text-bushiri-muted">
@@ -228,7 +363,7 @@ function TrendLineChart({
             axisLine={false}
             domain={[lower, upper]}
             tick={{ fill: bushiriColors.muted, fontSize: 12, fontWeight: 700 }}
-            tickFormatter={(value) => compactWon(Number(value))}
+            tickFormatter={(value) => formatKgManwonPrice(Number(value))}
             tickLine={false}
             width={70}
           />
@@ -355,7 +490,7 @@ function SeriesList({
                   </strong>
                 </div>
                 <strong className="font-mono text-sm font-extrabold tabular-nums text-bushiri-ink">
-                  {formatCurrency(entry.latestValue)}
+                  {formatKgManwonPrice(entry.latestValue)}
                 </strong>
               </div>
               <p className="m-0 text-[0.82rem] leading-snug text-bushiri-muted">
@@ -396,8 +531,10 @@ function ReferenceBadgeList({ badges }: { badges: TrendReferenceBadge[] }) {
 
 export function TrendsPage() {
   const [canonicalName, setCanonicalName] = useState(() => pickDefaultSpecies([]))
-  const [speciesQuery, setSpeciesQuery] = useState('')
+  const [speciesInput, setSpeciesInput] = useState(() => pickDefaultSpecies([]))
   const [days, setDays] = useState(30)
+  const [selectedOrigin, setSelectedOrigin] = useState('')
+  const [selectedClassification, setSelectedClassification] = useState('')
   const [visibleSeriesKeys, setVisibleSeriesKeys] = useState<string[]>([])
   const [seriesSelectionTouched, setSeriesSelectionTouched] = useState(false)
   const [hoveredSeriesKey, setHoveredSeriesKey] = useState<string | null>(null)
@@ -419,17 +556,25 @@ export function TrendsPage() {
     () => buildSpeciesOptions(market.data?.rows ?? []),
     [market.data?.rows],
   )
-  const filteredSpeciesOptions = useMemo(
-    () => filterSpeciesOptions(speciesOptions, speciesQuery),
-    [speciesOptions, speciesQuery],
-  )
   const shouldShowSelectedOption =
     canonicalName.trim() &&
-    !filteredSpeciesOptions.some((option) => option.value === canonicalName)
+    !speciesOptions.some((option) => option.value === canonicalName)
+  const speciesComboboxOptions = useMemo(
+    () => [
+      ...(shouldShowSelectedOption
+        ? [{ value: canonicalName, label: canonicalName, searchText: canonicalName }]
+        : []),
+      ...speciesOptions,
+    ],
+    [canonicalName, shouldShowSelectedOption, speciesOptions],
+  )
 
   useEffect(() => {
     if (!canonicalName.trim()) {
-      setCanonicalName(pickDefaultSpecies(speciesOptions))
+      const nextSpecies = pickDefaultSpecies(speciesOptions)
+
+      setCanonicalName(nextSpecies)
+      setSpeciesInput(nextSpecies)
     }
   }, [canonicalName, speciesOptions])
 
@@ -437,10 +582,46 @@ export function TrendsPage() {
     setSeriesSelectionTouched(false)
     setVisibleSeriesKeys([])
     setHoveredSeriesKey(null)
+    setSelectedOrigin('')
+    setSelectedClassification('')
   }, [canonicalName, days])
 
   const points = trend.data?.points ?? []
-  const comparison = useMemo(() => buildTrendComparison(points), [points])
+  const originOptions = useMemo(() => buildOriginOptions(points), [points])
+  const effectiveOrigin = useMemo(
+    () => resolveSelectedValue(selectedOrigin, originOptions, EMPTY_ORIGIN_VALUE),
+    [originOptions, selectedOrigin],
+  )
+  const originFilteredPoints = useMemo(
+    () =>
+      effectiveOrigin === EMPTY_ORIGIN_VALUE
+        ? []
+        : points.filter((point) => originCountryForPoint(point) === effectiveOrigin),
+    [effectiveOrigin, points],
+  )
+  const classificationOptions = useMemo(
+    () => buildClassificationOptions(originFilteredPoints),
+    [originFilteredPoints],
+  )
+  const effectiveClassification = useMemo(
+    () =>
+      resolveSelectedValue(
+        selectedClassification,
+        classificationOptions,
+        EMPTY_CLASSIFICATION_VALUE,
+      ),
+    [classificationOptions, selectedClassification],
+  )
+  const filteredPoints = useMemo(
+    () =>
+      effectiveClassification === EMPTY_CLASSIFICATION_VALUE
+        ? []
+        : originFilteredPoints.filter(
+            (point) => classificationForPoint(point) === effectiveClassification,
+          ),
+    [effectiveClassification, originFilteredPoints],
+  )
+  const comparison = useMemo(() => buildTrendComparison(filteredPoints), [filteredPoints])
   const allSeriesKeys = useMemo(
     () => comparison.series.map((entry) => entry.key),
     [comparison.series],
@@ -463,6 +644,26 @@ export function TrendsPage() {
     comparison.series.flatMap((entry) => entry.points.map((point) => point.date)),
   ).size
   const vendorCount = new Set(comparison.series.map((entry) => entry.vendor)).size
+  const handleSpeciesInputChange = (nextValue: string) => {
+    setSpeciesInput(nextValue)
+
+    if (speciesOptions.some((option) => option.value === nextValue)) {
+      setCanonicalName(nextValue)
+    }
+  }
+  const handleOriginChange = (nextOrigin: string) => {
+    setSelectedOrigin(nextOrigin)
+    setSelectedClassification('')
+    setSeriesSelectionTouched(false)
+    setVisibleSeriesKeys([])
+    setHoveredSeriesKey(null)
+  }
+  const handleClassificationChange = (nextClassification: string) => {
+    setSelectedClassification(nextClassification)
+    setSeriesSelectionTouched(false)
+    setVisibleSeriesKeys([])
+    setHoveredSeriesKey(null)
+  }
   const handleToggleSeries = (key: string, checked: boolean) => {
     setSeriesSelectionTouched(true)
     setVisibleSeriesKeys((current) => {
@@ -501,37 +702,46 @@ export function TrendsPage() {
           </Button>
         }
       >
-        <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.5fr)_minmax(0,0.9fr)] items-end gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
-          <LabeledField label="어종 검색">
-            <input
-              className={inputControlClass}
-              type="search"
-              value={speciesQuery}
-              onChange={(event) => setSpeciesQuery(event.target.value)}
+        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.6fr)] items-end gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
+          <LabeledField label="기준 어종" as="div">
+            <SearchCombobox
+              ariaLabel="기준 어종"
+              emptyMessage="어종이 없습니다"
+              options={speciesComboboxOptions.map((option) => ({
+                value: option.value,
+                label: option.label,
+                searchText: option.searchText,
+              }))}
               placeholder="예: 광어, 킹크랩, 연어"
+              value={speciesInput}
+              onChange={handleSpeciesInputChange}
             />
           </LabeledField>
 
-          <LabeledField label="기준 어종" as="div">
+          <LabeledField label="원산지" as="div">
             <SelectControl
-              ariaLabel="기준 어종"
-              value={canonicalName}
-              onChange={setCanonicalName}
-              options={[
-                ...(shouldShowSelectedOption
-                  ? [{ value: canonicalName, label: canonicalName }]
-                  : []),
-                ...filteredSpeciesOptions.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                })),
-              ]}
+              ariaLabel="원산지"
+              value={effectiveOrigin}
+              onChange={handleOriginChange}
+              options={
+                originOptions.length > 0
+                  ? originOptions
+                  : [{ value: EMPTY_ORIGIN_VALUE, label: '관측값 없음', disabled: true }]
+              }
             />
-            {filteredSpeciesOptions.length === 0 ? (
-              <small className="text-[0.76rem] leading-snug text-bushiri-warning">
-                검색 결과가 없으면 검색어를 지우고 다시 선택해 주세요.
-              </small>
-            ) : null}
+          </LabeledField>
+
+          <LabeledField label="분류" as="div">
+            <SelectControl
+              ariaLabel="분류"
+              value={effectiveClassification}
+              onChange={handleClassificationChange}
+              options={
+                classificationOptions.length > 0
+                  ? classificationOptions
+                  : [{ value: EMPTY_CLASSIFICATION_VALUE, label: '관측값 없음', disabled: true }]
+              }
+            />
           </LabeledField>
 
           <LabeledField label="조회 기간" as="div">
@@ -545,13 +755,6 @@ export function TrendsPage() {
               }))}
             />
           </LabeledField>
-
-          <div className="grid min-h-10 content-center rounded-lg border border-bushiri-line bg-bushiri-surface-muted px-3 py-2">
-            <span className="text-[0.78rem] font-extrabold text-bushiri-muted">비교 기준</span>
-            <strong className="text-sm font-extrabold text-bushiri-ink">
-              판매처 → 원산지
-            </strong>
-          </div>
         </div>
       </Panel>
 
@@ -564,7 +767,7 @@ export function TrendsPage() {
           value={
             latestLowest === null || latestHighest === null
               ? '—'
-              : `${compactWon(latestLowest)}~${compactWon(latestHighest)}`
+              : formatKgManwonPriceRange(latestLowest, latestHighest)
           }
         />
       </MetricGrid>
@@ -641,7 +844,7 @@ export function TrendsPage() {
               {
                 key: 'value',
                 header: 'kg당 가격',
-                render: (row) => formatCurrency(row.value, row.currency),
+                render: (row) => formatKgManwonPrice(row.value),
               },
               {
                 key: 'referenceBadges',
