@@ -70,8 +70,8 @@ export function Panel({
   children,
   className = '',
 }: PropsWithChildren<{
-  title: string
-  subtitle?: string
+  title: ReactNode
+  subtitle?: ReactNode
   actions?: ReactNode
   className?: string
 }>) {

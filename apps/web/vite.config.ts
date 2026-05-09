@@ -13,29 +13,53 @@ function createAdminProxyPlugin(proxyTarget: string | undefined, adminToken: str
       }
 
       server.middlewares.use(async (req, res, next) => {
-        if (req.method !== 'GET' || !req.url || !req.url.startsWith(`${ADMIN_BRIDGE_PREFIX}/`)) {
+        if (!req.method || !req.url || !req.url.startsWith(`${ADMIN_BRIDGE_PREFIX}/`)) {
           next()
           return
         }
 
-        const upstreamPath = req.url.replace(ADMIN_BRIDGE_PREFIX, '/api/admin')
-        const upstreamUrl = new URL(upstreamPath, proxyTarget)
-        const upstream = await fetch(upstreamUrl, {
-          headers: {
+        try {
+          const upstreamPath = req.url.replace(ADMIN_BRIDGE_PREFIX, '/api/admin')
+          const upstreamUrl = new URL(upstreamPath, proxyTarget)
+          const headers: Record<string, string> = {
             Accept: Array.isArray(req.headers.accept)
               ? req.headers.accept[0] ?? 'application/json'
               : req.headers.accept ?? 'application/json',
             Authorization: `Bearer ${adminToken}`,
-          },
-        })
+          }
 
-        res.statusCode = upstream.status
-        const contentType = upstream.headers.get('content-type')
-        if (contentType) {
-          res.setHeader('Content-Type', contentType)
+          const contentType = Array.isArray(req.headers['content-type'])
+            ? req.headers['content-type'][0]
+            : req.headers['content-type']
+
+          if (contentType) {
+            headers['Content-Type'] = contentType
+          }
+
+          const chunks: Buffer[] = []
+          if (req.method !== 'GET' && req.method !== 'HEAD') {
+            for await (const chunk of req) {
+              chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+            }
+          }
+
+          const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined
+          const upstream = await fetch(upstreamUrl, {
+            body,
+            headers,
+            method: req.method,
+          })
+
+          res.statusCode = upstream.status
+          const upstreamContentType = upstream.headers.get('content-type')
+          if (upstreamContentType) {
+            res.setHeader('Content-Type', upstreamContentType)
+          }
+
+          res.end(await upstream.text())
+        } catch (error) {
+          next(error)
         }
-
-        res.end(await upstream.text())
       })
     },
   }

@@ -61,6 +61,10 @@ function textValue(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 function trendCompareKey(row: Record<string, unknown>): string {
   const vendor = textValue(row.vendor_name) ?? '판매처 미상'
   const origin = textValue(row.origin) ?? '원산지 미상'
@@ -116,6 +120,162 @@ function parseInfoSources(value: unknown): string[] {
   }
 }
 
+type SpeciesProfilePatch = Partial<{
+  koreanName: string
+  englishName: string | null
+  aliases: string[]
+  seasonMonths: string
+  seasonNote: string
+  weightNote: string
+  habitatNote: string
+  tasteNote: string
+  buyingNote: string
+  photoUrl: string
+  photoSourceUrl: string
+  photoAttribution: string
+  photoLicense: string
+  infoSources: string[]
+}>
+
+function readPatchString(
+  payload: Record<string, unknown>,
+  key: string,
+  allowEmpty = false
+): string | Response | undefined {
+  if (!(key in payload)) {
+    return undefined
+  }
+
+  const value = payload[key]
+
+  if (typeof value !== 'string') {
+    return json({ ok: false, error: `Invalid field: ${key}` }, 400)
+  }
+
+  const trimmed = value.trim()
+
+  if (!allowEmpty && trimmed.length === 0) {
+    return json({ ok: false, error: `Missing field: ${key}` }, 400)
+  }
+
+  return trimmed
+}
+
+function readNullablePatchString(
+  payload: Record<string, unknown>,
+  key: string
+): string | null | Response | undefined {
+  if (!(key in payload)) {
+    return undefined
+  }
+
+  if (payload[key] === null) {
+    return null
+  }
+
+  const value = readPatchString(payload, key, true)
+  if (value instanceof Response || value === undefined) {
+    return value
+  }
+
+  return value.length > 0 ? value : null
+}
+
+function readPatchStringArray(
+  payload: Record<string, unknown>,
+  key: string
+): string[] | Response | undefined {
+  if (!(key in payload)) {
+    return undefined
+  }
+
+  const value = payload[key]
+
+  if (!Array.isArray(value)) {
+    return json({ ok: false, error: `Invalid field: ${key}` }, 400)
+  }
+
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean)
+}
+
+async function parseSpeciesProfilePatch(request: Request): Promise<SpeciesProfilePatch | Response> {
+  const payload = await request.json().catch(() => null)
+
+  if (!isRecord(payload)) {
+    return json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const patch: SpeciesProfilePatch = {}
+  const requiredTextFields = [
+    'koreanName',
+    'seasonMonths',
+    'seasonNote',
+    'weightNote',
+    'habitatNote',
+    'tasteNote',
+    'buyingNote'
+  ] as const
+
+  for (const key of requiredTextFields) {
+    const value = readPatchString(payload, key)
+    if (value instanceof Response) {
+      return value
+    }
+    if (value !== undefined) {
+      patch[key] = value
+    }
+  }
+
+  const englishName = readNullablePatchString(payload, 'englishName')
+  if (englishName instanceof Response) {
+    return englishName
+  }
+  if (englishName !== undefined) {
+    patch.englishName = englishName
+  }
+
+  const emptyAllowedTextFields = [
+    'photoUrl',
+    'photoSourceUrl',
+    'photoAttribution',
+    'photoLicense'
+  ] as const
+
+  for (const key of emptyAllowedTextFields) {
+    const value = readPatchString(payload, key, true)
+    if (value instanceof Response) {
+      return value
+    }
+    if (value !== undefined) {
+      patch[key] = value
+    }
+  }
+
+  const aliases = readPatchStringArray(payload, 'aliases')
+  if (aliases instanceof Response) {
+    return aliases
+  }
+  if (aliases !== undefined) {
+    patch.aliases = aliases
+  }
+
+  const infoSources = readPatchStringArray(payload, 'infoSources')
+  if (infoSources instanceof Response) {
+    return infoSources
+  }
+  if (infoSources !== undefined) {
+    patch.infoSources = infoSources
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return json({ ok: false, error: 'No fields to update' }, 400)
+  }
+
+  return patch
+}
+
 function mapSpeciesProfileRow(row: Record<string, unknown>) {
   return {
     canonicalName: String(row.canonical_name),
@@ -129,7 +289,7 @@ function mapSpeciesProfileRow(row: Record<string, unknown>) {
       .filter(Boolean),
     seasonMonths: String(row.season_months),
     seasonNote: String(row.season_note),
-    marketWeightNote: String(row.market_weight_note),
+    weightNote: String(row.market_weight_note),
     habitatNote: String(row.habitat_note),
     tasteNote: String(row.taste_note),
     buyingNote: String(row.buying_note),
@@ -251,6 +411,56 @@ async function getSpeciesProfile(db: D1DatabaseBinding, canonicalName: string) {
   return result ? mapSpeciesProfileRow(result) : null
 }
 
+async function updateSpeciesProfile(
+  db: D1DatabaseBinding,
+  canonicalName: string,
+  patch: SpeciesProfilePatch
+) {
+  const normalizedName = canonicalName === '황금광어' ? '광어' : canonicalName
+  const existingProfile = await getSpeciesProfile(db, normalizedName)
+
+  if (!existingProfile) {
+    return null
+  }
+
+  const assignments: string[] = []
+  const values: Array<string | number | null> = []
+
+  function assign(column: string, value: string | number | null | undefined) {
+    if (value === undefined) {
+      return
+    }
+
+    assignments.push(`${column} = ?`)
+    values.push(value)
+  }
+
+  assign('korean_name', patch.koreanName)
+  assign('english_name', patch.englishName)
+  assign('aliases', patch.aliases?.join(', '))
+  assign('season_months', patch.seasonMonths)
+  assign('season_note', patch.seasonNote)
+  assign('market_weight_note', patch.weightNote)
+  assign('habitat_note', patch.habitatNote)
+  assign('taste_note', patch.tasteNote)
+  assign('buying_note', patch.buyingNote)
+  assign('photo_url', patch.photoUrl)
+  assign('photo_source_url', patch.photoSourceUrl)
+  assign('photo_attribution', patch.photoAttribution)
+  assign('photo_license', patch.photoLicense)
+  assign('info_sources', patch.infoSources ? JSON.stringify(patch.infoSources) : undefined)
+
+  assignments.push('updated_at = CURRENT_TIMESTAMP')
+  values.push(normalizedName)
+
+  await db
+    .prepare(`UPDATE species_profiles SET ${assignments.join(', ')} WHERE canonical_name = ?`)
+    .bind(...values)
+    .run()
+
+  return getSpeciesProfile(db, normalizedName)
+}
+
 async function getRawPosts(db: D1DatabaseBinding) {
   const result = await db
     .prepare(
@@ -289,6 +499,26 @@ export async function handleMarketReadRequest(request: Request, env: Env | undef
   if (speciesInfoMatch && request.method === 'GET') {
     const canonicalName = decodeURIComponent(speciesInfoMatch[1])
     const profile = await getSpeciesProfile(env.DB, canonicalName)
+
+    return profile
+      ? json({ ok: true, item: profile })
+      : json({ ok: false, error: 'Species profile not found' }, 404)
+  }
+
+  const adminSpeciesInfoMatch = url.pathname.match(/^\/api\/admin\/species-info\/(.+)$/)
+  if (adminSpeciesInfoMatch && request.method === 'PATCH') {
+    const unauthorized = requireAdmin(request, env)
+    if (unauthorized) {
+      return unauthorized
+    }
+
+    const patch = await parseSpeciesProfilePatch(request)
+    if (patch instanceof Response) {
+      return patch
+    }
+
+    const canonicalName = decodeURIComponent(adminSpeciesInfoMatch[1])
+    const profile = await updateSpeciesProfile(env.DB, canonicalName, patch)
 
     return profile
       ? json({ ok: true, item: profile })

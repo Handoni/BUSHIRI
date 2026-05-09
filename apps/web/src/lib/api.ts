@@ -92,7 +92,7 @@ export type SpeciesProfile = {
   aliases: string[]
   seasonMonths: string
   seasonNote: string
-  marketWeightNote: string
+  weightNote: string
   habitatNote: string
   tasteNote: string
   buyingNote: string
@@ -104,6 +104,23 @@ export type SpeciesProfile = {
   sortOrder: number
   raw: unknown
 }
+
+export type SpeciesProfilePatch = Partial<{
+  koreanName: string
+  englishName: string | null
+  aliases: string[]
+  seasonMonths: string
+  seasonNote: string
+  weightNote: string
+  habitatNote: string
+  tasteNote: string
+  buyingNote: string
+  photoUrl: string
+  photoSourceUrl: string
+  photoAttribution: string
+  photoLicense: string
+  infoSources: string[]
+}>
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 const LOCAL_ADMIN_BASE = '/__bushiri_admin'
@@ -117,7 +134,7 @@ function buildUrl(path: string) {
 }
 
 function buildAdminUrl(path: string) {
-  if (!API_BASE) {
+  if (!API_BASE && import.meta.env.DEV) {
     return `${LOCAL_ADMIN_BASE}${path}`
   }
 
@@ -331,12 +348,18 @@ function extractArray(value: unknown, keys: string[] = []): unknown[] {
   return []
 }
 
-async function requestJson(path: string) {
+async function requestJson(path: string, init: RequestInit = {}) {
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    ...(init.headers as Record<string, string> | undefined),
+  }
+
+  if (init.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
   }
 
   const response = await fetch(buildUrl(path), {
+    ...init,
     headers,
   })
 
@@ -551,7 +574,10 @@ function normalizeSpeciesProfile(value: unknown, index: number): SpeciesProfile 
     aliases: toStringArray(getCandidate(record, ['aliases', 'aliasNames', 'alias_names'])),
     seasonMonths: toStringValue(getCandidate(record, ['seasonMonths', 'season_months']), '연중'),
     seasonNote: toStringValue(getCandidate(record, ['seasonNote', 'season_note']), '제철 정보가 아직 없습니다.'),
-    marketWeightNote: toStringValue(getCandidate(record, ['marketWeightNote', 'market_weight_note']), '중량 정보가 아직 없습니다.'),
+    weightNote: toStringValue(
+      getCandidate(record, ['weightNote', 'weight_note', 'market_weight_note']),
+      '중량 정보가 아직 없습니다.',
+    ),
     habitatNote: toStringValue(getCandidate(record, ['habitatNote', 'habitat_note']), '서식 정보가 아직 없습니다.'),
     tasteNote: toStringValue(getCandidate(record, ['tasteNote', 'taste_note']), '맛 정보가 아직 없습니다.'),
     buyingNote: toStringValue(getCandidate(record, ['buyingNote', 'buying_note']), '구매 메모가 아직 없습니다.'),
@@ -601,6 +627,25 @@ export async function getAdminSources(): Promise<SourceConfigItem[]> {
 export async function getSpeciesProfiles(): Promise<SpeciesProfile[]> {
   const payload = await requestJson('/api/species-info')
   return extractArray(payload, ['items', 'profiles', 'rows']).map(normalizeSpeciesProfile)
+}
+
+export async function updateSpeciesProfile(
+  canonicalName: string,
+  patch: SpeciesProfilePatch,
+): Promise<SpeciesProfile> {
+  const payload = await requestJson(
+    buildAdminUrl(`/species-info/${encodeURIComponent(canonicalName)}`),
+    {
+      body: JSON.stringify(patch),
+      method: 'PATCH',
+    },
+  )
+  const root = unwrapPayload(payload)
+  const item = isRecord(root)
+    ? getCandidate(root, ['item', 'profile', 'speciesProfile']) ?? root
+    : root
+
+  return normalizeSpeciesProfile(item, 0)
 }
 
 export async function getSpeciesTrend(

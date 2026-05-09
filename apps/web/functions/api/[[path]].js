@@ -4,6 +4,12 @@ const API_PROXY_TARGET_KEYS = [
   'VITE_API_BASE_URL',
 ]
 
+const ADMIN_TOKEN_KEYS = [
+  'BUSHIRI_ADMIN_TOKEN',
+  'ADMIN_TOKEN',
+  'VITE_ADMIN_TOKEN',
+]
+
 function resolveProxyTarget(env) {
   for (const key of API_PROXY_TARGET_KEYS) {
     const value = env[key]
@@ -16,12 +22,30 @@ function resolveProxyTarget(env) {
   return null
 }
 
-function buildUpstreamRequest(request, proxyTarget) {
+function resolveAdminToken(env) {
+  for (const key of ADMIN_TOKEN_KEYS) {
+    const value = env[key]
+
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+
+  return null
+}
+
+function buildUpstreamRequest(request, proxyTarget, adminToken) {
   const incomingUrl = new URL(request.url)
   const upstreamUrl = new URL(incomingUrl.pathname + incomingUrl.search, proxyTarget)
+  const headers = new Headers(request.headers)
+
+  if (incomingUrl.pathname.startsWith('/api/admin/') && adminToken) {
+    headers.set('Authorization', `Bearer ${adminToken}`)
+  }
+
   const init = {
     method: request.method,
-    headers: request.headers,
+    headers,
     redirect: 'manual',
   }
 
@@ -34,6 +58,7 @@ function buildUpstreamRequest(request, proxyTarget) {
 
 export async function onRequest(context) {
   const proxyTarget = resolveProxyTarget(context.env)
+  const adminToken = resolveAdminToken(context.env)
 
   if (!proxyTarget) {
     return Response.json(
@@ -57,5 +82,5 @@ export async function onRequest(context) {
     )
   }
 
-  return fetch(buildUpstreamRequest(context.request, proxyTarget))
+  return fetch(buildUpstreamRequest(context.request, proxyTarget, adminToken))
 }

@@ -86,7 +86,8 @@ const worker = {
       /^\/api\/market\/species\/.+/.test(url.pathname) ||
       url.pathname === '/api/species-info' ||
       /^\/api\/species-info\/.+/.test(url.pathname) ||
-      url.pathname === '/api/admin/raw-posts'
+      url.pathname === '/api/admin/raw-posts' ||
+      /^\/api\/admin\/species-info\/.+/.test(url.pathname)
     ) {
       response = await handleMarketReadRequest(request, env, url)
       return withCors(response, request, env)
