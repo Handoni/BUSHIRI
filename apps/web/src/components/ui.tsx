@@ -30,6 +30,8 @@ const controlClass = inputControlClass
 
 const dropdownSurfaceClass =
   'z-30 overflow-hidden rounded-lg border border-bushiri-line bg-bushiri-surface shadow-bushiri-popover'
+const scrollableDropdownSurfaceClass =
+  'z-30 overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg border border-bushiri-line bg-bushiri-surface shadow-bushiri-popover'
 
 export function PageHeader({
   title,
@@ -453,7 +455,10 @@ export function SearchCombobox({
       <Popover.Portal>
         <Popover.Content
           align="start"
-          className={cn(dropdownSurfaceClass, 'max-h-[min(20rem,var(--radix-popover-content-available-height))] p-1')}
+          className={cn(
+            scrollableDropdownSurfaceClass,
+            'max-h-[min(20rem,var(--radix-popover-content-available-height))] p-1',
+          )}
           onOpenAutoFocus={(event) => event.preventDefault()}
           sideOffset={4}
           style={{ width: 'var(--radix-popover-trigger-width, 22rem)' } as CSSProperties}
