@@ -23,7 +23,6 @@ import {
   Panel,
   SearchCombobox,
   SegmentedControl,
-  SelectControl,
   ToggleSwitch,
   cn,
   inputControlClass,
@@ -36,7 +35,7 @@ type TodayBoardUrlState = {
   sectionKey: TodayBoardSectionKey
   selectedDate: string
   query: string
-  country: string
+  countries: string[]
 }
 
 function parseBoardSection(value: string | null): TodayBoardSectionKey {
@@ -51,18 +50,22 @@ function readTodayBoardUrlState(): TodayBoardUrlState {
       sectionKey: DEFAULT_BOARD_SECTION,
       selectedDate: formatRelativeDateInput(),
       query: '',
-      country: 'all',
+      countries: [],
     }
   }
 
   const searchParams = new URLSearchParams(window.location.search)
   const selectedDate = searchParams.get('date')?.trim() || formatRelativeDateInput()
+  const countries = searchParams
+    .getAll('country')
+    .map((country) => country.trim())
+    .filter((country) => country && country !== 'all')
 
   return {
     sectionKey: parseBoardSection(searchParams.get('section')),
     selectedDate,
     query: searchParams.get('q') ?? '',
-    country: searchParams.get('country')?.trim() || 'all',
+    countries,
   }
 }
 
@@ -70,7 +73,7 @@ function replaceTodayBoardUrlState({
   sectionKey,
   selectedDate,
   query,
-  country,
+  countries,
 }: TodayBoardUrlState) {
   if (typeof window === 'undefined') {
     return
@@ -92,11 +95,8 @@ function replaceTodayBoardUrlState({
     searchParams.delete('q')
   }
 
-  if (country && country !== 'all') {
-    searchParams.set('country', country)
-  } else {
-    searchParams.delete('country')
-  }
+  searchParams.delete('country')
+  countries.forEach((country) => searchParams.append('country', country))
 
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
 }
@@ -229,6 +229,91 @@ function SpeciesLabel({
   )
 }
 
+function CountryMultiSelect({
+  options,
+  selectedValues,
+  onChange,
+}: {
+  options: Array<{ value: string; label: string }>
+  selectedValues: string[]
+  onChange: (values: string[]) => void
+}) {
+  const orderedValues = options.map((option) => option.value)
+  const allSelected =
+    selectedValues.length === 0 || selectedValues.length === orderedValues.length
+  const selectedSet = new Set(selectedValues)
+  const selectedLabel = allSelected
+    ? '전체'
+    : selectedValues.length === 1
+      ? options.find((option) => option.value === selectedValues[0])?.label ?? selectedValues[0]
+      : `${selectedValues.length}개 국가`
+
+  const updateSelected = (nextValues: string[]) => {
+    const orderedNextValues = orderedValues.filter((value) => nextValues.includes(value))
+
+    onChange(orderedNextValues.length === orderedValues.length ? [] : orderedNextValues)
+  }
+
+  const toggleCountry = (country: string) => {
+    if (allSelected) {
+      updateSelected(orderedValues.filter((value) => value !== country))
+      return
+    }
+
+    if (selectedSet.has(country)) {
+      updateSelected(selectedValues.filter((value) => value !== country))
+      return
+    }
+
+    updateSelected([...selectedValues, country])
+  }
+
+  return (
+    <details className="group relative">
+      <summary
+        className={cn(
+          inputControlClass,
+          'flex cursor-pointer list-none items-center justify-between gap-3 font-bold [&::-webkit-details-marker]:hidden',
+        )}
+      >
+        <span className="min-w-0 truncate">{selectedLabel}</span>
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-xs font-extrabold text-bushiri-muted transition-transform group-open:rotate-180"
+        >
+          v
+        </span>
+      </summary>
+      <div className="absolute left-0 top-[calc(100%+0.35rem)] z-30 grid max-h-72 w-full min-w-52 overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface p-1.5 shadow-bushiri-popover">
+        <label className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm font-extrabold text-bushiri-ink hover:bg-bushiri-primary/10">
+          <input
+            checked={allSelected}
+            className="h-4 w-4 accent-bushiri-primary"
+            onChange={() => onChange([])}
+            type="checkbox"
+          />
+          <span>전체 선택</span>
+        </label>
+        <div className="my-1 h-px bg-bushiri-line" />
+        {options.map((option) => (
+          <label
+            className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm font-bold text-bushiri-ink hover:bg-bushiri-primary/10"
+            key={option.value}
+          >
+            <input
+              checked={allSelected || selectedSet.has(option.value)}
+              className="h-4 w-4 accent-bushiri-primary"
+              onChange={() => toggleCountry(option.value)}
+              type="checkbox"
+            />
+            <span className="min-w-0 truncate">{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </details>
+  )
+}
+
 function MarketListingCard({
   rowKey,
   vendor,
@@ -308,7 +393,7 @@ export function TodayPage() {
   const [expandedSpeciesKeys, setExpandedSpeciesKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
-  const { sectionKey: activeSection, selectedDate, query, country } = urlState
+  const { sectionKey: activeSection, selectedDate, query, countries } = urlState
   const requestedDate = selectedDate.trim() || undefined
   const market = useResource(() => getTodayMarket(requestedDate), [requestedDate])
 
@@ -356,13 +441,10 @@ export function TodayPage() {
         .sort((left, right) => left.localeCompare(right, 'ko')),
     ]
 
-    return [
-      { value: 'all', label: '전체' },
-      ...orderedCountries.map((countryName) => ({
-        value: countryName,
-        label: countryLabel(countryName),
-      })),
-    ]
+    return orderedCountries.map((countryName) => ({
+      value: countryName,
+      label: countryLabel(countryName),
+    }))
   }, [marketRows])
 
   const filteredRows = useMemo(() => {
@@ -381,7 +463,7 @@ export function TodayPage() {
         typeof raw?.originCountry === 'string' && raw.originCountry.trim()
           ? raw.originCountry.trim()
           : row.market
-      const matchesCountry = country === 'all' || originCountry === country
+      const matchesCountry = countries.length === 0 || countries.includes(originCountry)
 
       return (
         matchesQuery &&
@@ -389,7 +471,7 @@ export function TodayPage() {
         (!excludeSoldOut || !soldOut)
       )
     })
-  }, [country, excludeSoldOut, marketRows, query])
+  }, [countries, excludeSoldOut, marketRows, query])
 
   const board = useMemo(() => buildTodayBoard(filteredRows), [filteredRows])
   const visibleSections = useMemo(
@@ -443,9 +525,9 @@ export function TodayPage() {
     updateUrlState({ query })
   }
 
-  const updateCountry = (country: string) => {
+  const updateCountries = (countries: string[]) => {
     setExpandedSpeciesKeys(new Set())
-    updateUrlState({ country })
+    updateUrlState({ countries })
   }
 
   const toggleSpecies = (key: string) => {
@@ -506,11 +588,10 @@ export function TodayPage() {
           </LabeledField>
 
           <LabeledField label="국가" as="div">
-            <SelectControl
-              ariaLabel="국가 선택"
+            <CountryMultiSelect
               options={countryOptions}
-              value={country}
-              onChange={updateCountry}
+              selectedValues={countries}
+              onChange={updateCountries}
             />
           </LabeledField>
 
