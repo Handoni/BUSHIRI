@@ -63,26 +63,26 @@ function SpeciesPhoto({ profile }: { profile: SpeciesProfile }) {
 
   if (!profile.photoUrl || failed) {
     return (
-      <div className="grid aspect-[4/3] min-h-64 place-items-center rounded-lg border border-dashed border-bushiri-line bg-bushiri-surface-muted text-sm font-bold text-bushiri-muted">
+      <div className="grid aspect-[4/3] min-h-64 self-start place-items-center rounded-lg border border-dashed border-bushiri-line bg-bushiri-surface-muted text-sm font-bold text-bushiri-muted">
         사진 준비 중
       </div>
     )
   }
 
   return (
-    <figure className="overflow-hidden rounded-lg border border-bushiri-line bg-bushiri-surface-muted">
+    <figure className="self-start overflow-hidden rounded-lg border border-bushiri-line bg-bushiri-surface-muted">
       <img
         alt={`${profile.koreanName} 사진`}
-        className="aspect-[4/3] w-full object-cover"
+        className="block w-full h-auto"
         loading="lazy"
         onError={() => setFailed(true)}
         src={profile.photoUrl}
       />
-      <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-bushiri-line px-3 py-2 text-[0.72rem] font-bold text-bushiri-muted">
-        <span className="min-w-0 truncate">{profile.photoAttribution}</span>
+      <figcaption className="flex h-7 items-center justify-between gap-2 overflow-hidden border-t border-bushiri-line px-3 text-[0.72rem] font-bold leading-none text-bushiri-muted">
+        <span className="min-w-0 flex-1 truncate">{profile.photoAttribution}</span>
         {profile.photoSourceUrl ? (
           <a
-            className="inline-flex items-center gap-1 text-bushiri-primary transition hover:text-bushiri-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary"
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-bushiri-primary transition hover:text-bushiri-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary"
             href={profile.photoSourceUrl}
             rel="noreferrer"
             target="_blank"
