@@ -356,6 +356,19 @@ function orderedRowsForSection(
   }
 
   return orderedKeys
+    .reduce<string[]>((groupedKeys, species) => {
+      const row = section.rowsBySpecies.get(species)
+
+      if (!row || groupedKeys.includes(species)) {
+        return groupedKeys
+      }
+
+      orderedKeys
+        .filter((candidate) => section.rowsBySpecies.get(candidate)?.canonicalName === row.canonicalName)
+        .forEach((candidate) => pushUniqueValue(groupedKeys, candidate))
+
+      return groupedKeys
+    }, [])
     .map((species) => section.rowsBySpecies.get(species))
     .filter((row): row is TodayBoardRow => row !== undefined)
 }
