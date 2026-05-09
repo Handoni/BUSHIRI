@@ -80,6 +80,26 @@ function sourceLabel(url: string, index: number) {
   }
 }
 
+function getSearchableSpeciesText(profile: SpeciesProfile) {
+  return [
+    profile.canonicalName,
+    profile.koreanName,
+    profile.englishName,
+    ...profile.aliases,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function getVisibleProfiles(profiles: SpeciesProfile[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase()
+
+  return normalizedQuery
+    ? profiles.filter((profile) => getSearchableSpeciesText(profile).includes(normalizedQuery))
+    : profiles
+}
+
 function createEditorState(profile: SpeciesProfile): SpeciesEditorState {
   return {
     koreanName: profile.koreanName,
@@ -456,24 +476,10 @@ function SpeciesList({
   onQueryChange: (query: string) => void
   onSelect: (canonicalName: string) => void
 }) {
-  const normalizedQuery = query.trim().toLowerCase()
-  const visibleProfiles = normalizedQuery
-    ? profiles.filter((profile) =>
-        [
-          profile.canonicalName,
-          profile.koreanName,
-          profile.englishName,
-          ...profile.aliases,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-    : profiles
+  const visibleProfiles = getVisibleProfiles(profiles, query)
 
   return (
-    <Panel title="어종 목록" subtitle={`${profiles.length}종 등록`} className="h-fit lg:sticky lg:top-5">
+    <Panel title="어종 목록" subtitle={`${profiles.length}종 등록`} className="h-fit max-lg:hidden lg:sticky lg:top-5">
       <div className="relative">
         <input
           aria-label="어종 정보 검색"
@@ -531,6 +537,92 @@ function SpeciesList({
         )}
       </div>
     </Panel>
+  )
+}
+
+function MobileSpeciesPicker({
+  activeProfile,
+  profiles,
+  query,
+  onQueryChange,
+  onSelect,
+}: {
+  activeProfile: SpeciesProfile
+  profiles: SpeciesProfile[]
+  query: string
+  onQueryChange: (query: string) => void
+  onSelect: (canonicalName: string) => void
+}) {
+  const visibleProfiles = getVisibleProfiles(profiles, query)
+
+  function selectMobileProfile(canonicalName: string) {
+    onSelect(canonicalName)
+    onQueryChange('')
+  }
+
+  return (
+    <section className="grid gap-3 rounded-xl border border-bushiri-line bg-bushiri-surface/95 p-3 shadow-bushiri-panel lg:hidden">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0">
+          <p className="m-0 text-[0.72rem] font-extrabold text-bushiri-muted">선택한 어종</p>
+          <div className="mt-1 flex min-w-0 items-center gap-2">
+            <strong className="truncate text-lg font-extrabold leading-none text-bushiri-ink">
+              {activeProfile.koreanName}
+            </strong>
+            <span className="shrink-0 rounded-full border border-bushiri-primary/20 bg-bushiri-primary-soft px-2 py-1 text-[0.7rem] font-extrabold leading-none text-bushiri-primary">
+              {activeProfile.seasonMonths}
+            </span>
+          </div>
+        </div>
+
+        <div className="relative w-[132px] max-[380px]:w-[108px]">
+          <input
+            aria-label="어종 정보 검색"
+            className={cn(inputControlClass, 'min-h-9 rounded-full px-3 pr-8 text-[0.82rem]')}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="검색"
+            type="search"
+            value={query}
+          />
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-bushiri-muted"
+            strokeWidth={2.4}
+          />
+        </div>
+      </div>
+
+      {visibleProfiles.length > 0 ? (
+        <div className="-mx-3 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max max-w-none gap-2">
+            {visibleProfiles.map((profile) => {
+              const active = profile.canonicalName === activeProfile.canonicalName
+
+              return (
+                <button
+                  aria-current={active ? 'true' : undefined}
+                  className={cn(
+                    'inline-flex h-9 shrink-0 items-center gap-1 rounded-full border px-3 text-[0.82rem] font-extrabold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px',
+                    active
+                      ? 'border-bushiri-primary bg-bushiri-primary text-white'
+                      : 'border-bushiri-line bg-bushiri-surface-muted text-bushiri-ink',
+                  )}
+                  key={profile.canonicalName}
+                  onClick={() => selectMobileProfile(profile.canonicalName)}
+                  type="button"
+                >
+                  {profile.koreanName}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-bushiri-line bg-bushiri-surface-muted px-3 py-2 text-[0.82rem] font-bold text-bushiri-muted">
+          검색 결과가 없습니다
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -690,6 +782,14 @@ export function SpeciesInfoPage() {
     <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-5 max-lg:grid-cols-1">
       <SpeciesList
         activeName={activeProfile.canonicalName}
+        onQueryChange={setQuery}
+        onSelect={selectProfile}
+        profiles={profiles}
+        query={query}
+      />
+
+      <MobileSpeciesPicker
+        activeProfile={activeProfile}
         onQueryChange={setQuery}
         onSelect={selectProfile}
         profiles={profiles}
