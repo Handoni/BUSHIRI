@@ -110,15 +110,17 @@ const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
   노르웨이: '🇳🇴',
   러시아: '🇷🇺',
 }
+const UNKNOWN_COUNTRY_FLAG = '🏳️'
+const UNKNOWN_COUNTRY_LABEL = '원산지 미상'
 
 const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아']
 
 function countryLabel(country: string) {
-  return `${COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
+  return `${country === UNKNOWN_COUNTRY_LABEL ? UNKNOWN_COUNTRY_FLAG : COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
 }
 
 function countryFlag(country: string | null) {
-  return country ? COUNTRY_FLAG_BY_NAME[country] ?? '•' : '•'
+  return country ? COUNTRY_FLAG_BY_NAME[country] ?? (country === UNKNOWN_COUNTRY_LABEL ? UNKNOWN_COUNTRY_FLAG : '•') : UNKNOWN_COUNTRY_FLAG
 }
 
 function badgeTone(tag: string) {

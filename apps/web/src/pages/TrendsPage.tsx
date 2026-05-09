@@ -56,6 +56,7 @@ const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
   노르웨이: '🇳🇴',
   러시아: '🇷🇺',
 }
+const UNKNOWN_COUNTRY_FLAG = '🏳️'
 
 function getSeriesColor(index: number) {
   return trendChartColors[index % trendChartColors.length]
@@ -104,7 +105,7 @@ function getRawCandidate(raw: Record<string, unknown>, keys: string[]): unknown 
 }
 
 function countryLabel(country: string) {
-  return `${COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
+  return `${country === UNKNOWN_ORIGIN_LABEL ? UNKNOWN_COUNTRY_FLAG : COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
 }
 
 function originCountryForPoint(point: { raw: unknown }): string {
