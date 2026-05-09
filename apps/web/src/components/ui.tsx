@@ -17,16 +17,18 @@ export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
 }
 
-const surfaceClass =
-  'border border-[#d8dbd2] bg-[#fffefa]/95 shadow-[0_1px_2px_rgba(20,21,18,0.04),0_18px_40px_-36px_rgba(20,21,18,0.22)] backdrop-blur-[10px]'
+export const surfaceClass =
+  'border border-bushiri-line bg-bushiri-surface/95 shadow-bushiri-panel backdrop-blur-[10px]'
 
-const mutedTextClass = 'text-[#676b63]'
+export const mutedTextClass = 'text-bushiri-muted'
 
-const controlClass =
-  'min-h-10 w-full rounded-lg border border-[#d8dbd2] bg-[#fffefa] px-3 text-sm text-[#141512] outline-none transition focus:border-[#174f49] focus:ring-2 focus:ring-[#174f49]/15'
+export const inputControlClass =
+  'min-h-10 w-full rounded-lg border border-bushiri-line bg-bushiri-surface px-3 text-sm text-bushiri-ink outline-none transition focus:border-bushiri-primary focus:ring-2 focus:ring-bushiri-primary/15'
+
+const controlClass = inputControlClass
 
 const dropdownSurfaceClass =
-  'z-30 overflow-hidden rounded-lg border border-[#d8dbd2] bg-[#fffefa] shadow-[0_18px_42px_-28px_rgba(20,21,18,0.42)]'
+  'z-30 overflow-hidden rounded-lg border border-bushiri-line bg-bushiri-surface shadow-bushiri-popover'
 
 export function PageHeader({
   title,
@@ -42,8 +44,8 @@ export function PageHeader({
   return (
     <section className="flex items-end justify-between gap-6 px-0.5 py-1 max-md:flex-col max-md:items-stretch">
       <div>
-        <p className="mb-2 text-[0.72rem] font-bold uppercase text-[#174f49]">{eyebrow}</p>
-        <h1 className="m-0 text-[2.75rem] font-extrabold leading-[0.95] tracking-normal text-[#141512] max-md:text-4xl">
+        <p className="mb-2 text-[0.72rem] font-bold uppercase text-bushiri-primary">{eyebrow}</p>
+        <h1 className="m-0 text-[2.75rem] font-extrabold leading-[0.95] tracking-normal text-bushiri-ink max-md:text-4xl">
           {title}
         </h1>
         {description ? (
@@ -71,9 +73,9 @@ export function Panel({
 }>) {
   return (
     <section className={cn(surfaceClass, 'rounded-xl p-5', className)}>
-      <header className="mb-4 flex items-center justify-between gap-4 border-b border-[#d8dbd2] pb-4 max-md:flex-col max-md:items-stretch">
+      <header className="mb-4 flex items-center justify-between gap-4 border-b border-bushiri-line pb-4 max-md:flex-col max-md:items-stretch">
         <div>
-          <h2 className="m-0 text-[1.02rem] font-bold leading-tight tracking-normal text-[#141512]">
+          <h2 className="m-0 text-[1.02rem] font-bold leading-tight tracking-normal text-bushiri-ink">
             {title}
           </h2>
           {subtitle ? (
@@ -110,9 +112,9 @@ export function MetricCard({
   className?: string
 }) {
   return (
-    <article className={cn(surfaceClass, 'flex flex-col gap-1 rounded-lg bg-[#fffefa]/90 p-4 shadow-none', className)}>
+    <article className={cn(surfaceClass, 'flex flex-col gap-1 rounded-lg bg-bushiri-surface/90 p-4 shadow-none', className)}>
       <span className={cn('text-[0.78rem] uppercase tracking-normal', mutedTextClass)}>{label}</span>
-      <strong className="text-2xl font-bold tracking-normal text-[#141512] tabular-nums">{value}</strong>
+      <strong className="text-2xl font-bold tracking-normal text-bushiri-ink tabular-nums">{value}</strong>
       {detail ? <small className={cn('text-[0.78rem] leading-snug', mutedTextClass)}>{detail}</small> : null}
     </article>
   )
@@ -133,10 +135,10 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex min-h-10 items-center justify-center rounded-lg border px-4 text-sm font-bold transition duration-200 hover:-translate-y-px focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex min-h-10 items-center justify-center rounded-lg border px-4 text-sm font-bold transition duration-200 hover:-translate-y-px focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60',
         tone === 'subtle'
-          ? 'border-[#d8dbd2] bg-[#fffefa] text-[#141512]'
-          : 'border-[#174f49] bg-[#174f49] text-white',
+          ? 'border-bushiri-line bg-bushiri-surface text-bushiri-ink'
+          : 'border-bushiri-primary bg-bushiri-primary text-white',
       )}
       disabled={disabled}
       onClick={onClick}
@@ -155,9 +157,9 @@ export function EmptyState({
   description: string
 }) {
   return (
-    <div className="grid min-h-52 place-items-center rounded-lg border border-dashed border-[#d8dbd2] bg-[#f7f7f2]/70 p-6 text-center">
+    <div className="grid min-h-52 place-items-center rounded-lg border border-dashed border-bushiri-line bg-bushiri-surface-muted/70 p-6 text-center">
       <div>
-        <h3 className="m-0 text-lg font-bold text-[#141512]">{title}</h3>
+        <h3 className="m-0 text-lg font-bold text-bushiri-ink">{title}</h3>
         <p className={cn('mt-2 leading-relaxed', mutedTextClass)}>{description}</p>
       </div>
     </div>
@@ -172,9 +174,9 @@ export function ErrorState({
   description: string
 }) {
   return (
-    <div className="rounded-lg border border-[#8c3f3d]/25 bg-[#8c3f3d]/10 p-5">
-      <h3 className="m-0 text-lg font-bold text-[#8c3f3d]">{title}</h3>
-      <p className="mt-2 leading-relaxed text-[#8c3f3d]">{description}</p>
+    <div className="rounded-lg border border-bushiri-danger/25 bg-bushiri-danger/10 p-5">
+      <h3 className="m-0 text-lg font-bold text-bushiri-danger">{title}</h3>
+      <p className="mt-2 leading-relaxed text-bushiri-danger">{description}</p>
     </div>
   )
 }
@@ -192,7 +194,7 @@ export function LoadingBlock({
         <div
           key={index}
           className={cn(
-            'h-13 animate-pulse rounded-lg bg-[#d8dbd2]/45',
+            'h-13 animate-pulse rounded-lg bg-bushiri-line/45',
             className.includes('board') ? 'h-[72px] rounded-md odd:w-[calc(100%-1.5rem)]' : '',
           )}
         />
@@ -209,10 +211,10 @@ export function Badge({
   tone?: 'neutral' | 'success' | 'warning' | 'danger'
 }) {
   const toneClass = {
-    neutral: 'border-[#d8dbd2] bg-[#f7f7f2] text-[#676b63]',
-    success: 'border-[#247455]/30 bg-[#247455]/10 text-[#247455]',
-    warning: 'border-[#8c641d]/30 bg-[#8c641d]/10 text-[#8c641d]',
-    danger: 'border-[#8c3f3d]/30 bg-[#8c3f3d]/10 text-[#8c3f3d]',
+    neutral: 'border-bushiri-line bg-bushiri-surface-muted text-bushiri-muted',
+    success: 'border-bushiri-success/30 bg-bushiri-success/10 text-bushiri-success',
+    warning: 'border-bushiri-warning/30 bg-bushiri-warning/10 text-bushiri-warning',
+    danger: 'border-bushiri-danger/30 bg-bushiri-danger/10 text-bushiri-danger',
   }[tone]
 
   return (
@@ -238,14 +240,14 @@ export function DataTable({
   }
 
   return (
-    <div className="overflow-auto rounded-lg border border-[#d8dbd2] bg-[#fffefa]">
+    <div className="overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface">
       <table className="w-full min-w-[820px] border-separate border-spacing-0 text-left">
         <thead>
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
-                className="border-b border-[#d8dbd2] bg-[#f7f7f2] px-4 py-3 text-[0.78rem] font-extrabold uppercase tracking-normal text-[#676b63]"
+                className="border-b border-bushiri-line bg-bushiri-surface-muted px-4 py-3 text-[0.78rem] font-extrabold uppercase tracking-normal text-bushiri-muted"
               >
                 {column.header}
               </th>
@@ -256,7 +258,7 @@ export function DataTable({
           {rows.map((row, index) => (
             <tr key={row.id ?? row.key ?? `${index}`} className="align-top">
               {columns.map((column) => (
-                <td key={column.key} className="border-b border-[#d8dbd2] px-4 py-4 text-sm text-[#141512] last:border-b-0">
+                <td key={column.key} className="border-b border-bushiri-line px-4 py-4 text-sm text-bushiri-ink last:border-b-0">
                   {column.render(row)}
                 </td>
               ))}
@@ -280,7 +282,7 @@ export function LabeledField({
 }>) {
   const content = (
     <>
-      <span className="text-[0.78rem] font-extrabold tracking-normal text-[#676b63]">{label}</span>
+      <span className="text-[0.78rem] font-extrabold tracking-normal text-bushiri-muted">{label}</span>
       {children}
       {helper ? <small className={cn('text-[0.76rem] leading-snug', mutedTextClass)}>{helper}</small> : null}
     </>
@@ -323,7 +325,7 @@ export function SelectControl({
         className={cn(controlClass, 'inline-flex items-center justify-between gap-3 font-bold')}
       >
         <Select.Value placeholder={placeholder} />
-        <Select.Icon className="shrink-0 text-xs font-extrabold text-[#676b63]" aria-hidden="true">
+        <Select.Icon className="shrink-0 text-xs font-extrabold text-bushiri-muted" aria-hidden="true">
           v
         </Select.Icon>
       </Select.Trigger>
@@ -336,13 +338,13 @@ export function SelectControl({
           <Select.Viewport className="max-h-[min(18rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] p-1">
             {options.map((option) => (
               <Select.Item
-                className="relative flex min-h-9 cursor-pointer select-none items-center rounded-md py-2 pl-3 pr-8 text-sm font-bold text-[#141512] outline-none transition data-[disabled]:pointer-events-none data-[highlighted]:bg-[#e5eeeb] data-[state=checked]:bg-[#f7f7f2] data-[disabled]:opacity-50"
+                className="relative flex min-h-9 cursor-pointer select-none items-center rounded-md py-2 pl-3 pr-8 text-sm font-bold text-bushiri-ink outline-none transition data-[disabled]:pointer-events-none data-[highlighted]:bg-bushiri-primary-soft data-[state=checked]:bg-bushiri-surface-muted data-[disabled]:opacity-50"
                 disabled={option.disabled}
                 key={option.value}
                 value={option.value}
               >
                 <Select.ItemText>{option.label}</Select.ItemText>
-                <Select.ItemIndicator className="absolute right-3 h-2 w-2 rounded-sm bg-[#174f49]" />
+                <Select.ItemIndicator className="absolute right-3 h-2 w-2 rounded-sm bg-bushiri-primary" />
               </Select.Item>
             ))}
           </Select.Viewport>
@@ -429,7 +431,7 @@ export function SearchCombobox({
           />
           <button
             aria-label={`${ariaLabel} 추천 열기`}
-            className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-xs font-extrabold text-[#676b63] transition hover:bg-[#f7f7f2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49] active:translate-y-px"
+            className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-xs font-extrabold text-bushiri-muted transition hover:bg-bushiri-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
             onClick={() => setOpen((current) => !current)}
             onMouseDown={(event) => event.preventDefault()}
             type="button"
@@ -452,8 +454,8 @@ export function SearchCombobox({
                 <button
                   aria-selected={option.value === value}
                   className={cn(
-                    'flex min-h-9 w-full items-center rounded-md px-3 py-2 text-left text-sm font-bold text-[#141512] outline-none transition hover:bg-[#e5eeeb] focus-visible:bg-[#e5eeeb]',
-                    option.value === value ? 'bg-[#f7f7f2] text-[#174f49]' : '',
+                    'flex min-h-9 w-full items-center rounded-md px-3 py-2 text-left text-sm font-bold text-bushiri-ink outline-none transition hover:bg-bushiri-primary-soft focus-visible:bg-bushiri-primary-soft',
+                    option.value === value ? 'bg-bushiri-surface-muted text-bushiri-primary' : '',
                   )}
                   key={option.value}
                   onClick={() => selectOption(option.value)}
@@ -464,7 +466,7 @@ export function SearchCombobox({
                 </button>
               ))
             ) : (
-              <div className="rounded-md px-3 py-2 text-sm font-bold text-[#8c641d]">
+              <div className="rounded-md px-3 py-2 text-sm font-bold text-bushiri-warning">
                 {emptyMessage}
               </div>
             )}
@@ -489,8 +491,8 @@ export function CheckboxControl({
       aria-label={label}
       checked={checked}
       className={cn(
-        'grid h-4 w-4 shrink-0 place-items-center rounded border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49] active:translate-y-px',
-        checked ? 'border-[#174f49] bg-[#174f49]' : 'border-[#d8dbd2] bg-[#fffefa]',
+        'grid h-4 w-4 shrink-0 place-items-center rounded border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px',
+        checked ? 'border-bushiri-primary bg-bushiri-primary' : 'border-bushiri-line bg-bushiri-surface',
       )}
       onCheckedChange={(nextChecked) => onChange(nextChecked === true)}
     >
@@ -534,13 +536,13 @@ export function SegmentedControl({
     >
       {items.map((item) => (
         <ToggleGroup.Item
-          className="group inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d8dbd2] bg-[#fffefa] px-4 text-sm font-extrabold text-[#141512] transition duration-200 hover:-translate-y-px focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49] active:translate-y-px data-[state=on]:border-[#174f49] data-[state=on]:bg-[#174f49] data-[state=on]:text-white"
+          className="group inline-flex min-h-10 items-center justify-center rounded-lg border border-bushiri-line bg-bushiri-surface px-4 text-sm font-extrabold text-bushiri-ink transition duration-200 hover:-translate-y-px focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px data-[state=on]:border-bushiri-primary data-[state=on]:bg-bushiri-primary data-[state=on]:text-white"
           key={item.value}
           value={item.value}
         >
           {item.label}
           {item.detail ? (
-            <span className="ml-2 text-xs text-[#676b63] group-data-[state=on]:text-white/75">
+            <span className="ml-2 text-xs text-bushiri-muted group-data-[state=on]:text-white/75">
               {item.detail}
             </span>
           ) : null}
@@ -567,23 +569,23 @@ export function ToggleSwitch({
     <Switch.Root
       aria-label={label}
       checked={checked}
-      className="inline-flex min-h-10 w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg border border-[#d8dbd2] bg-[#fffefa] px-3 text-sm font-bold text-[#141512] transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49] active:translate-y-px"
+      className="inline-flex min-h-10 w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg border border-bushiri-line bg-bushiri-surface px-3 text-sm font-bold text-bushiri-ink transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
       onCheckedChange={onChange}
     >
       <span
         className={cn(
           'relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200',
-          checked ? 'bg-[#174f49]' : 'bg-[#d8dbd2]',
+          checked ? 'bg-bushiri-primary' : 'bg-bushiri-line',
         )}
       >
         <Switch.Thumb
           className={cn(
-            'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-[0_2px_8px_rgba(20,21,18,0.18)] transition-transform duration-200 will-change-transform',
+            'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-bushiri-thumb transition-transform duration-200 will-change-transform',
             checked ? 'translate-x-5' : 'translate-x-0',
           )}
         />
       </span>
-      <span className="min-w-0 truncate text-[#676b63]">{checked ? onLabel : offLabel}</span>
+      <span className="min-w-0 truncate text-bushiri-muted">{checked ? onLabel : offLabel}</span>
     </Switch.Root>
   )
 }
@@ -614,7 +616,7 @@ export function SparkBars({
           <div className="flex flex-col items-center gap-2" key={`${item.label}-${index}`}>
             <div className="flex min-h-[220px] w-full items-end">
               <div
-                className="w-full rounded-t-md bg-[#174f49]"
+                className="w-full rounded-t-md bg-bushiri-primary"
                 style={{ height } as CSSProperties}
               />
             </div>
@@ -631,11 +633,11 @@ export function JsonDetails({ value }: { value: unknown }) {
 
   return (
     <Collapsible.Root className="max-w-[28rem]" open={open} onOpenChange={setOpen}>
-      <Collapsible.Trigger className="cursor-pointer text-sm font-bold text-[#174f49] transition hover:-translate-y-px focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49] active:translate-y-px">
+      <Collapsible.Trigger className="cursor-pointer text-sm font-bold text-bushiri-primary transition hover:-translate-y-px focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px">
         {open ? '원본 payload 접기' : '원본 payload 보기'}
       </Collapsible.Trigger>
       <Collapsible.Content>
-        <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-[#1a1d18] p-3 text-xs leading-relaxed text-[#fffefa]">
+        <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-bushiri-ink-soft p-3 text-xs leading-relaxed text-bushiri-surface">
           {JSON.stringify(value, null, 2)}
         </pre>
       </Collapsible.Content>

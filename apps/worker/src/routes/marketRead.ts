@@ -35,6 +35,8 @@ function mapTodayRow(row: Record<string, unknown>) {
     canonicalName: String(row.canonical_name),
     displayName: String(row.display_name),
     origin: row.origin === null ? null : String(row.origin),
+    originCountry: row.origin_country == null ? null : String(row.origin_country),
+    originDetail: row.origin_detail == null ? null : String(row.origin_detail),
     productionType: row.production_type === null ? null : String(row.production_type),
     freshnessState: row.freshness_state === null ? null : String(row.freshness_state),
     grade: row.grade === null ? null : String(row.grade),
@@ -76,6 +78,8 @@ function mapSpeciesRow(row: Record<string, unknown>) {
     pricePerKg: row.price_per_kg === null ? null : Number(row.price_per_kg),
     priceText: row.price_text === null ? null : String(row.price_text),
     origin: row.origin === null ? null : String(row.origin),
+    originCountry: row.origin_country == null ? null : String(row.origin_country),
+    originDetail: row.origin_detail == null ? null : String(row.origin_detail),
     productionType: row.production_type === null ? null : String(row.production_type),
     freshnessState: row.freshness_state === null ? null : String(row.freshness_state),
     grade: row.grade === null ? null : String(row.grade),
@@ -114,7 +118,7 @@ async function getMarketToday(db: D1DatabaseBinding, date: string) {
   const result = await db
     .prepare(
       `SELECT i.id, i.source_id, s.vendor_name, i.market_date, i.category, i.canonical_name, i.display_name, i.origin,
-              i.production_type, i.freshness_state, i.grade, i.size_min_kg, i.size_max_kg, i.unit, i.price_per_kg,
+              i.origin_country, i.origin_detail, i.production_type, i.freshness_state, i.grade, i.size_min_kg, i.size_max_kg, i.unit, i.price_per_kg,
               i.price_text, i.sold_out, i.event_flag, i.half_available, i.packing_note, i.notes,
               i.best_condition_flag, i.lowest_price_flag, i.ai_recommendation_flag
        FROM item_snapshots i
@@ -134,7 +138,7 @@ async function getSpeciesHistory(db: D1DatabaseBinding, canonicalName: string, d
   const result = await db
     .prepare(
       `SELECT i.market_date, i.source_id, s.vendor_name, i.canonical_name,
-              i.display_name, i.price_per_kg, i.price_text, i.origin, i.production_type,
+              i.display_name, i.price_per_kg, i.price_text, i.origin, i.origin_country, i.origin_detail, i.production_type,
               i.freshness_state, i.grade, i.size_min_kg, i.size_max_kg, i.notes
        FROM item_snapshots i
        JOIN sources s ON s.id = i.source_id

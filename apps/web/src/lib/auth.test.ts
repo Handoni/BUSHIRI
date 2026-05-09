@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   authenticateAdmin,
   deserializeAuthSession,
+  getAuthSnapshotFromStorageValue,
   hasAdminPermission,
   serializeAuthSession,
 } from './auth'
@@ -29,6 +30,21 @@ describe('admin authentication', () => {
     expect(deserializeAuthSession(serializeAuthSession(session))).toEqual(session)
     expect(deserializeAuthSession('{"permissions":["viewer"],"role":"viewer","username":"simgip"}')).toBeNull()
     expect(deserializeAuthSession('not-json')).toBeNull()
+  })
+
+  it('keeps the external-store snapshot reference stable until storage changes', () => {
+    const session = authenticateAdmin('simgip', 'gogamo')
+    const serializedSession = serializeAuthSession(session)
+
+    const firstSnapshot = getAuthSnapshotFromStorageValue(serializedSession)
+    const secondSnapshot = getAuthSnapshotFromStorageValue(serializedSession)
+    const clearedSnapshot = getAuthSnapshotFromStorageValue(null)
+    const restoredSnapshot = getAuthSnapshotFromStorageValue(serializedSession)
+
+    expect(firstSnapshot).toBe(secondSnapshot)
+    expect(clearedSnapshot).toBeNull()
+    expect(restoredSnapshot).toEqual(firstSnapshot)
+    expect(restoredSnapshot).not.toBe(firstSnapshot)
   })
 
   it('treats admin access as an explicit account permission', () => {

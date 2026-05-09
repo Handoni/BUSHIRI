@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --local --port 8787",
+    "dev": "wrangler dev --port 8787",
+    "dev:local": "wrangler dev --local --port 8787",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "d1:migrate:local": "wrangler d1 migrations apply bushiri --local",

@@ -1,6 +1,6 @@
 INSERT INTO species_aliases (category, canonical_name, alias) VALUES
 ('fish', '광어', '광어'),
-('fish', '광어', '황금광어'),
+('fish', '황금광어', '황금광어'),
 ('fish', '광어', '제주광어'),
 ('fish', '참돔', '참돔'),
 ('fish', '참돔', '자연산참돔'),

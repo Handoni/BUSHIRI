@@ -40,6 +40,8 @@ class MarketPipelineTest(unittest.TestCase):
         self.assertEqual(payload["vendorName"], "성전물산")
         self.assertEqual(payload["rawText"], "광어 kg 4.8")
         self.assertIn("strict JSON", MARKET_AGENT_INSTRUCTIONS)
+        self.assertIn("originCountry", MARKET_AGENT_INSTRUCTIONS)
+        self.assertIn("originDetail", MARKET_AGENT_INSTRUCTIONS)
 
     def test_validates_market_post_output_schema(self) -> None:
         parsed = ParsedMarketPost.model_validate(
@@ -54,6 +56,8 @@ class MarketPipelineTest(unittest.TestCase):
                         "canonicalName": "광어",
                         "displayName": "자연산 광어",
                         "origin": "국내산",
+                        "originCountry": "국내산",
+                        "originDetail": "자연산",
                         "productionType": "자연산",
                         "freshnessState": None,
                         "grade": None,
@@ -74,6 +78,8 @@ class MarketPipelineTest(unittest.TestCase):
 
         self.assertEqual(parsed.items[0].unit, "kg")
         self.assertEqual(parsed.items[0].pricePerKg, 48000)
+        self.assertEqual(parsed.items[0].originCountry, "국내산")
+        self.assertEqual(parsed.items[0].originDetail, "자연산")
 
 
 if __name__ == "__main__":

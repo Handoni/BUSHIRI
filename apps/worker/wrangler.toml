@@ -15,6 +15,7 @@ CORS_ALLOWED_ORIGINS = "https://bushiri-46o.pages.dev"
 binding = "DB"
 database_name = "bushiri"
 database_id = "6aff5af0-5886-439d-b1f5-3af265cd1d01"
+remote = true
 
 [triggers]
 crons = ["0 23 * * *"]

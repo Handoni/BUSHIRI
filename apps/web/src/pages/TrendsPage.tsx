@@ -39,26 +39,14 @@ import {
   MetricGrid,
   Panel,
   SelectControl,
+  inputControlClass,
 } from '../components/ui'
+import { bushiriColors, trendChartColors } from '../lib/designSystem'
 
 const DAY_OPTIONS = [14, 30, 60, 90]
-const inputClass =
-  'min-h-10 w-full rounded-lg border border-[#d8dbd2] bg-[#fffefa] px-3 text-sm text-[#141512] outline-none transition focus:border-[#174f49] focus:ring-2 focus:ring-[#174f49]/15'
-const chartColors = [
-  '#174f49',
-  '#8c641d',
-  '#345f86',
-  '#8c3f3d',
-  '#4f6f32',
-  '#7a5d3f',
-  '#2d6d7d',
-  '#5f5b8a',
-  '#9a593f',
-  '#24605a',
-]
 
 function getSeriesColor(index: number) {
-  return chartColors[index % chartColors.length]
+  return trendChartColors[index % trendChartColors.length]
 }
 
 function compactWon(value: number | null | undefined) {
@@ -121,7 +109,7 @@ function TrendChartTooltip({
 
     return [
       {
-        color: item.color ?? '#174f49',
+        color: item.color ?? bushiriColors.primary,
         entry,
         value,
       },
@@ -133,10 +121,10 @@ function TrendChartTooltip({
   }
 
   return (
-    <div className="min-w-64 rounded-lg border border-[#d8dbd2] bg-[#fffefa] p-3 shadow-[0_18px_42px_-28px_rgba(20,21,18,0.42)]">
-      <div className="mb-2 flex items-baseline justify-between gap-4 border-b border-[#d8dbd2] pb-2">
-        <strong className="text-sm font-extrabold text-[#141512]">{formatTrendDate(date)}</strong>
-        <span className="text-[0.74rem] font-bold text-[#676b63]">KG당 가격</span>
+    <div className="min-w-64 rounded-lg border border-bushiri-line bg-bushiri-surface p-3 shadow-bushiri-popover">
+      <div className="mb-2 flex items-baseline justify-between gap-4 border-b border-bushiri-line pb-2">
+        <strong className="text-sm font-extrabold text-bushiri-ink">{formatTrendDate(date)}</strong>
+        <span className="text-[0.74rem] font-bold text-bushiri-muted">KG당 가격</span>
       </div>
       <div className="grid gap-2">
         {entries.map(({ color, entry, value }) => (
@@ -148,15 +136,15 @@ function TrendChartTooltip({
                   className="h-2.5 w-2.5 shrink-0 rounded-sm"
                   style={{ backgroundColor: color } as CSSProperties}
                 />
-                <strong className="truncate text-sm font-extrabold text-[#141512]">
+                <strong className="truncate text-sm font-extrabold text-bushiri-ink">
                   {entry.vendor}
                 </strong>
               </span>
-              <strong className="font-mono text-sm font-extrabold tabular-nums text-[#141512]">
+              <strong className="font-mono text-sm font-extrabold tabular-nums text-bushiri-ink">
                 {formatCurrency(value)}
               </strong>
             </div>
-            <p className="m-0 text-[0.78rem] leading-snug text-[#676b63]">
+            <p className="m-0 text-[0.78rem] leading-snug text-bushiri-muted">
               {entry.origin} · {formatPercent(entry.changePercent)}
             </p>
           </div>
@@ -219,7 +207,7 @@ function TrendLineChart({
   return (
     <div
       aria-label="조건별 시세 라인 차트"
-      className="h-[390px] overflow-hidden rounded-lg border border-[#d8dbd2] bg-[#fffefa] px-2 py-3"
+      className="h-[390px] overflow-hidden rounded-lg border border-bushiri-line bg-bushiri-surface px-2 py-3"
       role="img"
     >
       <ResponsiveContainer height="100%" width="100%">
@@ -228,18 +216,18 @@ function TrendLineChart({
           margin={{ top: 20, right: 28, bottom: 8, left: 4 }}
           onMouseLeave={() => onHoverSeries(null)}
         >
-          <CartesianGrid stroke="#d8dbd2" strokeDasharray="3 5" vertical={false} />
+          <CartesianGrid stroke={bushiriColors.line} strokeDasharray="3 5" vertical={false} />
           <XAxis
             axisLine={false}
             dataKey="label"
             minTickGap={18}
-            tick={{ fill: '#676b63', fontSize: 12, fontWeight: 700 }}
+            tick={{ fill: bushiriColors.muted, fontSize: 12, fontWeight: 700 }}
             tickLine={false}
           />
           <YAxis
             axisLine={false}
             domain={[lower, upper]}
-            tick={{ fill: '#676b63', fontSize: 12, fontWeight: 700 }}
+            tick={{ fill: bushiriColors.muted, fontSize: 12, fontWeight: 700 }}
             tickFormatter={(value) => compactWon(Number(value))}
             tickLine={false}
             width={70}
@@ -248,7 +236,7 @@ function TrendLineChart({
             content={(props) => (
               <TrendChartTooltip {...props} seriesByKey={seriesByKey} />
             )}
-            cursor={{ stroke: '#174f49', strokeOpacity: 0.18, strokeWidth: 2 }}
+            cursor={{ stroke: bushiriColors.primary, strokeOpacity: 0.18, strokeWidth: 2 }}
           />
           {visibleSeries.map((entry) => {
             const index = series.findIndex((candidate) => candidate.key === entry.key)
@@ -311,20 +299,20 @@ function SeriesList({
 
   return (
     <div className="grid gap-3">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-[#d8dbd2] bg-[#f7f7f2] px-3 py-2">
-        <span className="text-[0.78rem] font-extrabold text-[#676b63]">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-bushiri-line bg-bushiri-surface-muted px-3 py-2">
+        <span className="text-[0.78rem] font-extrabold text-bushiri-muted">
           {visibleSeriesKeys.length}/{series.length}개 표시
         </span>
         <div className="flex gap-1.5">
           <button
-            className="rounded-md border border-[#d8dbd2] bg-[#fffefa] px-2.5 py-1 text-xs font-extrabold text-[#141512] transition hover:border-[#174f49] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49]"
+            className="rounded-md border border-bushiri-line bg-bushiri-surface px-2.5 py-1 text-xs font-extrabold text-bushiri-ink transition hover:border-bushiri-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary"
             onClick={onSelectAll}
             type="button"
           >
             전체
           </button>
           <button
-            className="rounded-md border border-[#d8dbd2] bg-[#fffefa] px-2.5 py-1 text-xs font-extrabold text-[#141512] transition hover:border-[#174f49] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174f49]"
+            className="rounded-md border border-bushiri-line bg-bushiri-surface px-2.5 py-1 text-xs font-extrabold text-bushiri-ink transition hover:border-bushiri-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary"
             onClick={onClearAll}
             type="button"
           >
@@ -333,7 +321,7 @@ function SeriesList({
         </div>
       </div>
 
-      <div className="max-h-[432px] overflow-auto rounded-lg border border-[#d8dbd2] bg-[#fffefa]">
+      <div className="max-h-[432px] overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface">
         {series.map((entry, index) => {
           const color = getSeriesColor(index)
           const checked = visibleKeySet.has(entry.key)
@@ -342,9 +330,9 @@ function SeriesList({
           return (
             <label
               className={cn(
-                'grid cursor-pointer gap-2 border-b border-[#d8dbd2] p-3 transition last:border-b-0 hover:bg-[#f7f7f2]',
+                'grid cursor-pointer gap-2 border-b border-bushiri-line p-3 transition last:border-b-0 hover:bg-bushiri-surface-muted',
                 checked ? 'opacity-100' : 'opacity-55',
-                highlighted ? 'bg-[#174f49]/8 ring-1 ring-inset ring-[#174f49]/25' : '',
+                highlighted ? 'bg-bushiri-primary/8 ring-1 ring-inset ring-bushiri-primary/25' : '',
               )}
               key={entry.key}
               onMouseEnter={() => onHoverSeries(entry.key)}
@@ -362,15 +350,15 @@ function SeriesList({
                     className="h-3 w-3 shrink-0 rounded-sm"
                     style={{ backgroundColor: color } as CSSProperties}
                   />
-                  <strong className="truncate text-sm font-extrabold text-[#141512]">
+                  <strong className="truncate text-sm font-extrabold text-bushiri-ink">
                     {entry.vendor}
                   </strong>
                 </div>
-                <strong className="font-mono text-sm font-extrabold tabular-nums text-[#141512]">
+                <strong className="font-mono text-sm font-extrabold tabular-nums text-bushiri-ink">
                   {formatCurrency(entry.latestValue)}
                 </strong>
               </div>
-              <p className="m-0 text-[0.82rem] leading-snug text-[#676b63]">
+              <p className="m-0 text-[0.82rem] leading-snug text-bushiri-muted">
                 {entry.origin}
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -388,14 +376,14 @@ function SeriesList({
 
 function ReferenceBadgeList({ badges }: { badges: TrendReferenceBadge[] }) {
   if (badges.length === 0) {
-    return <span className="text-[#676b63]">—</span>
+    return <span className="text-bushiri-muted">—</span>
   }
 
   return (
     <div className="flex max-w-[28rem] flex-wrap gap-1.5">
       {badges.map((badge) => (
         <span
-          className="inline-flex max-w-[14rem] items-center rounded-full border border-[#d8dbd2] bg-[#f7f7f2] px-2 py-1 text-xs font-bold leading-tight text-[#676b63]"
+          className="inline-flex max-w-[14rem] items-center rounded-full border border-bushiri-line bg-bushiri-surface-muted px-2 py-1 text-xs font-bold leading-tight text-bushiri-muted"
           key={`${badge.key}-${badge.label}`}
           title={badge.label}
         >
@@ -516,7 +504,7 @@ export function TrendsPage() {
         <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.5fr)_minmax(0,0.9fr)] items-end gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
           <LabeledField label="어종 검색">
             <input
-              className={inputClass}
+              className={inputControlClass}
               type="search"
               value={speciesQuery}
               onChange={(event) => setSpeciesQuery(event.target.value)}
@@ -540,7 +528,7 @@ export function TrendsPage() {
               ]}
             />
             {filteredSpeciesOptions.length === 0 ? (
-              <small className="text-[0.76rem] leading-snug text-[#8c641d]">
+              <small className="text-[0.76rem] leading-snug text-bushiri-warning">
                 검색 결과가 없으면 검색어를 지우고 다시 선택해 주세요.
               </small>
             ) : null}
@@ -558,9 +546,9 @@ export function TrendsPage() {
             />
           </LabeledField>
 
-          <div className="grid min-h-10 content-center rounded-lg border border-[#d8dbd2] bg-[#f7f7f2] px-3 py-2">
-            <span className="text-[0.78rem] font-extrabold text-[#676b63]">비교 기준</span>
-            <strong className="text-sm font-extrabold text-[#141512]">
+          <div className="grid min-h-10 content-center rounded-lg border border-bushiri-line bg-bushiri-surface-muted px-3 py-2">
+            <span className="text-[0.78rem] font-extrabold text-bushiri-muted">비교 기준</span>
+            <strong className="text-sm font-extrabold text-bushiri-ink">
               판매처 → 원산지
             </strong>
           </div>

@@ -175,13 +175,13 @@ describe('buildTodayBoard', () => {
     expect(board.rows[0].cells['성전물산']).toHaveLength(1)
     expect(board.rows[0].cells['성전물산'][0]).toMatchObject({
       price: 33000,
-      variantLabel: '국내산 · 자연산 · 활어 · 1.7~2kg',
+      variantLabel: '활어',
       weightLabel: '1.7~2kg',
-      statusTags: ['국내산', '자연산', '활어', '1.7~2kg'],
+      statusTags: ['활어'],
     })
   })
 
-  it('stacks the same vendor species into price-sorted cards when structured fields differ', () => {
+  it('separates same species rows by country and origin detail', () => {
     const board = buildTodayBoard([
       {
         id: '1',
@@ -206,6 +206,27 @@ describe('buildTodayBoard', () => {
       },
       {
         id: '2',
+        canonicalName: '전복',
+        species: '전복',
+        market: '국내산',
+        price: 18000,
+        lowPrice: null,
+        highPrice: null,
+        unit: 'kg',
+        currency: 'KRW',
+        observedAt: '2026-05-04',
+        source: '줄포상회',
+        raw: {
+          origin: '국내산',
+          displayName: '전복',
+          sizeMinKg: null,
+          sizeMaxKg: null,
+          soldOut: false,
+          eventFlag: false,
+        },
+      },
+      {
+        id: '3',
         canonicalName: '가리비',
         species: '홍가리비',
         market: '국내산',
@@ -227,24 +248,22 @@ describe('buildTodayBoard', () => {
       },
     ])
 
-    expect(board.rows).toHaveLength(1)
-    expect(board.rows[0].speciesLabel).toBe('가리비')
-    expect(board.rows[0].cells['줄포상회'].map((listing) => listing.price)).toEqual([
-      9000,
-      27000,
-    ])
-    const [domesticScallop, japanScallop] = board.rows[0].cells['줄포상회']
+    expect(board.rows).toHaveLength(3)
+    expect(board.rows.map((row) => row.speciesLabel)).toEqual(['가리비', '가리비', '전복'])
+
+    const japanScallop = board.rows.find((row) => row.cells['줄포상회'][0]?.price === 27000)?.cells['줄포상회'][0]
+    const domesticScallop = board.rows.find((row) => row.cells['줄포상회'][0]?.price === 9000)?.cells['줄포상회'][0]
 
     expect(japanScallop).toMatchObject({
       price: 27000,
-      variantLabel: '일본산',
-      statusTags: ['일본산'],
+      variantLabel: '기본',
+      statusTags: [],
     })
     expect(domesticScallop).toMatchObject({
       price: 9000,
-      variantLabel: '국내산 · 홍가리비',
+      variantLabel: '홍가리비',
       weightLabel: '중량 미상',
-      statusTags: ['품절', '국내산', '홍가리비'],
+      statusTags: ['품절', '홍가리비'],
     })
   })
 
@@ -360,7 +379,8 @@ describe('buildTodayBoard', () => {
       vendor: '참조은수산',
       listing: {
         price: 25000,
-        statusTags: ['국내산', '0.8~1kg'],
+        statusTags: [],
+        weightLabel: '0.8~1kg',
       },
     })
   })

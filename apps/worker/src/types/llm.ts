@@ -11,6 +11,8 @@ export type ParsedMarketItem = {
   canonicalName: string | null
   displayName: string
   origin: string | null
+  originCountry: string | null
+  originDetail: string | null
   productionType: string | null
   freshnessState: string | null
   grade: string | null

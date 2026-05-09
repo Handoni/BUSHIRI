@@ -132,7 +132,7 @@ export function SettingsPage() {
                 render: (row) => (
                   <div>
                     <Badge label={row.statusSignal} tone={getStatusSignalTone(row.statusSignal)} />
-                    <small className="mt-2 block text-xs leading-snug text-[#676b63]">{row.statusDetail}</small>
+                    <small className="mt-2 block text-xs leading-snug text-bushiri-muted">{row.statusDetail}</small>
                   </div>
                 ),
               },
@@ -152,8 +152,8 @@ export function SettingsPage() {
                 header: '밴드키 / 가격 표기',
                 render: (row) => (
                   <div className="flex flex-col gap-2">
-                    <span className="break-words text-sm font-bold text-[#174f49]">{row.endpoint}</span>
-                    <small className="text-xs leading-snug text-[#676b63]">{row.notes}</small>
+                    <span className="break-words text-sm font-bold text-bushiri-primary">{row.endpoint}</span>
+                    <small className="text-xs leading-snug text-bushiri-muted">{row.notes}</small>
                     <JsonDetails value={row.raw} />
                   </div>
                 ),

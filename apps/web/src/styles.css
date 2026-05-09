@@ -1,1 +1,120 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bushiri-ink: #10212a;
+  --color-bushiri-ink-soft: #173241;
+  --color-bushiri-muted: #607783;
+  --color-bushiri-primary: #0d6f80;
+  --color-bushiri-primary-deep: #064657;
+  --color-bushiri-primary-soft: #d8eef1;
+  --color-bushiri-current: #286f99;
+  --color-bushiri-kelp: #34735f;
+  --color-bushiri-sand: #9b6815;
+  --color-bushiri-coral: #9b4f4b;
+  --color-bushiri-success: #247455;
+  --color-bushiri-warning: #936515;
+  --color-bushiri-danger: #9b4f4b;
+  --color-bushiri-shell: #eef7f5;
+  --color-bushiri-shell-bright: #f7fcfb;
+  --color-bushiri-surface: #fbfffd;
+  --color-bushiri-surface-muted: #edf6f3;
+  --color-bushiri-surface-raised: #ffffff;
+  --color-bushiri-line: #c8dedc;
+  --color-bushiri-line-strong: #88b4b7;
+  --color-bushiri-award-ai: #f7d979;
+  --color-bushiri-award-ai-text: #704f05;
+  --color-bushiri-award-low: #d9efff;
+  --color-bushiri-award-low-text: #24516e;
+  --color-bushiri-award-best: #ddf4dd;
+  --color-bushiri-award-best-text: #2e6534;
+}
+
+:root {
+  --bushiri-app-background:
+    radial-gradient(circle at 12% 0%, rgba(13, 111, 128, 0.16), transparent 30rem),
+    radial-gradient(circle at 90% 8%, rgba(52, 115, 95, 0.11), transparent 26rem),
+    linear-gradient(180deg, var(--color-bushiri-shell-bright) 0%, var(--color-bushiri-shell) 46%, #e8f4f1 100%);
+  --bushiri-panel-shadow:
+    0 1px 2px rgba(16, 33, 42, 0.04),
+    0 18px 40px -36px rgba(6, 70, 87, 0.34);
+  --bushiri-popover-shadow: 0 18px 42px -28px rgba(16, 33, 42, 0.44);
+  --bushiri-thumb-shadow: 0 2px 8px rgba(16, 33, 42, 0.18);
+}
+
+.bg-bushiri-app {
+  background: var(--bushiri-app-background);
+}
+
+.shadow-bushiri-panel {
+  box-shadow: var(--bushiri-panel-shadow);
+}
+
+.shadow-bushiri-popover {
+  box-shadow: var(--bushiri-popover-shadow);
+}
+
+.shadow-bushiri-thumb {
+  box-shadow: var(--bushiri-thumb-shadow);
+}
+
+.award-tone-ai-low-best {
+  border-color: color-mix(in srgb, var(--color-bushiri-award-ai) 72%, transparent);
+  background:
+    radial-gradient(circle at 12% 18%, rgba(247, 217, 121, 0.92) 0%, rgba(247, 217, 121, 0) 46%),
+    radial-gradient(circle at 88% 16%, rgba(217, 239, 255, 0.96) 0%, rgba(217, 239, 255, 0) 48%),
+    radial-gradient(circle at 48% 100%, rgba(221, 244, 221, 0.98) 0%, rgba(221, 244, 221, 0) 52%),
+    linear-gradient(135deg, #fff9df 0%, #eefaf0 48%, #edf7ff 100%);
+}
+
+.award-tone-ai-low-best:hover {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(247, 217, 121, 1) 0%, rgba(247, 217, 121, 0) 48%),
+    radial-gradient(circle at 88% 16%, rgba(217, 239, 255, 1) 0%, rgba(217, 239, 255, 0) 50%),
+    radial-gradient(circle at 48% 100%, rgba(221, 244, 221, 1) 0%, rgba(221, 244, 221, 0) 54%),
+    linear-gradient(135deg, #fff4bd 0%, #f5fff4 48%, #f2f9ff 100%);
+}
+
+.award-tone-ai-low {
+  border-color: color-mix(in srgb, var(--color-bushiri-award-ai) 72%, transparent);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(247, 217, 121, 0.94) 0%, rgba(247, 217, 121, 0) 54%),
+    radial-gradient(circle at 90% 16%, rgba(217, 239, 255, 0.98) 0%, rgba(217, 239, 255, 0) 56%),
+    linear-gradient(135deg, #fff8d8 0%, #edf7ff 100%);
+}
+
+.award-tone-ai-low:hover {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(247, 217, 121, 1) 0%, rgba(247, 217, 121, 0) 56%),
+    radial-gradient(circle at 90% 16%, rgba(217, 239, 255, 1) 0%, rgba(217, 239, 255, 0) 58%),
+    linear-gradient(135deg, #fff2b8 0%, #f2f9ff 100%);
+}
+
+.award-tone-ai-best {
+  border-color: color-mix(in srgb, var(--color-bushiri-award-ai) 72%, transparent);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(247, 217, 121, 0.94) 0%, rgba(247, 217, 121, 0) 54%),
+    radial-gradient(circle at 84% 92%, rgba(221, 244, 221, 0.98) 0%, rgba(221, 244, 221, 0) 58%),
+    linear-gradient(135deg, #fff8d8 0%, #f3fbef 100%);
+}
+
+.award-tone-ai-best:hover {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(247, 217, 121, 1) 0%, rgba(247, 217, 121, 0) 56%),
+    radial-gradient(circle at 84% 92%, rgba(221, 244, 221, 1) 0%, rgba(221, 244, 221, 0) 60%),
+    linear-gradient(135deg, #fff2b8 0%, #f5fff4 100%);
+}
+
+.award-tone-low-best {
+  border-color: color-mix(in srgb, var(--color-bushiri-current) 46%, transparent);
+  background:
+    radial-gradient(circle at 88% 18%, rgba(217, 239, 255, 0.98) 0%, rgba(217, 239, 255, 0) 56%),
+    radial-gradient(circle at 18% 88%, rgba(221, 244, 221, 0.98) 0%, rgba(221, 244, 221, 0) 58%),
+    linear-gradient(135deg, #edf7ff 0%, #f3fbef 100%);
+}
+
+.award-tone-low-best:hover {
+  background:
+    radial-gradient(circle at 88% 18%, rgba(217, 239, 255, 1) 0%, rgba(217, 239, 255, 0) 58%),
+    radial-gradient(circle at 18% 88%, rgba(221, 244, 221, 1) 0%, rgba(221, 244, 221, 0) 60%),
+    linear-gradient(135deg, #f2f9ff 0%, #f5fff4 100%);
+}
