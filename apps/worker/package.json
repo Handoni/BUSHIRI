@@ -6,10 +6,14 @@
   "scripts": {
     "dev": "wrangler dev --port 8787",
     "dev:local": "wrangler dev --local --port 8787",
+    "discord:register-commands": "node scripts/registerDiscordCommands.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "d1:migrate:local": "wrangler d1 migrations apply bushiri --local",
     "d1:migrate:remote": "wrangler d1 migrations apply bushiri --remote"
+  },
+  "dependencies": {
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.1",

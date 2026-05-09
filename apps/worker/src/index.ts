@@ -2,6 +2,7 @@ import type { Env } from './env'
 import { runScheduledCollect } from './jobs/scheduledCollect'
 import { getHealthResponse } from './routes/health'
 import { handleAdminCollectTestBand } from './routes/adminCollect'
+import { handleDiscordDailySummary, handleDiscordInteraction } from './routes/discord'
 import { handleMarketReadRequest } from './routes/marketRead'
 import { handleManualUpload } from './routes/manualUpload'
 import { handleSourcesRequest } from './routes/sources'
@@ -80,6 +81,11 @@ const worker = {
       return withCors(response, request, env)
     }
 
+    if (url.pathname === '/api/discord/interactions' && request.method === 'POST') {
+      response = await handleDiscordInteraction(request, env)
+      return withCors(response, request, env)
+    }
+
     if (
       url.pathname === '/api/market/today' ||
       url.pathname === '/api/insights' ||
@@ -109,6 +115,11 @@ const worker = {
 
     if (url.pathname === '/api/admin/manual-post' && request.method === 'POST') {
       response = await handleManualUpload(request, env)
+      return withCors(response, request, env)
+    }
+
+    if (url.pathname === '/api/admin/discord/daily-summary' && request.method === 'POST') {
+      response = await handleDiscordDailySummary(request, env)
       return withCors(response, request, env)
     }
 
