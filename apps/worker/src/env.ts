@@ -31,6 +31,7 @@ export type Env = {
   DISCORD_WEBHOOK_URL?: string
   LLM_PROVIDER: string
   LLM_MODEL: string
+  ALLOWED_ORIGINS?: string
   APP_TIMEZONE: string
   RAW_POST_RETENTION_DAYS: string
   COLLECT_LOOKBACK_HOURS: string
