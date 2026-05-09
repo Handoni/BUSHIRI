@@ -410,11 +410,14 @@ export function TodayPage() {
   }, [])
 
   const marketRows = market.data?.rows ?? []
+  const unfilteredBoard = useMemo(() => buildTodayBoard(marketRows), [marketRows])
   const speciesOptions = useMemo(() => {
-    return Array.from(new Set(marketRows.map((row) => row.canonicalName)))
+    const section = unfilteredBoard.sections.find((candidate) => candidate.key === activeSection)
+
+    return Array.from(new Set((section?.rows ?? []).map((row) => row.canonicalName)))
       .filter(Boolean)
       .sort((left, right) => left.localeCompare(right, 'ko'))
-  }, [marketRows])
+  }, [activeSection, unfilteredBoard.sections])
   const countryOptions = useMemo(() => {
     const countries = Array.from(
       new Set(
@@ -552,26 +555,13 @@ export function TodayPage() {
         actions={<Button onClick={() => void market.refresh()}>시세 다시 불러오기</Button>}
         className="relative z-20 py-4"
       >
-        <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.8fr)] items-end gap-2.5 max-xl:grid-cols-3 max-md:grid-cols-1">
+        <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)] items-end gap-2.5 max-xl:grid-cols-3 max-md:grid-cols-1">
           <LabeledField label="기준일">
             <input
               className={inputControlClass}
               type="date"
               value={selectedDate}
               onChange={(event) => updateSelectedDate(event.target.value)}
-            />
-          </LabeledField>
-
-          <LabeledField label="어종 검색" as="div">
-            <SearchCombobox
-              ariaLabel="어종 검색"
-              options={speciesOptions.map((species) => ({
-                value: species,
-                label: species,
-              }))}
-              placeholder="예: 광어, 대게"
-              value={query}
-              onChange={updateQuery}
             />
           </LabeledField>
 
@@ -585,6 +575,19 @@ export function TodayPage() {
               }))}
               value={activeSection}
               onChange={(sectionKey) => setSelectedSection(sectionKey as TodayBoardSectionKey)}
+            />
+          </LabeledField>
+
+          <LabeledField label="어종 검색" as="div">
+            <SearchCombobox
+              ariaLabel="어종 검색"
+              options={speciesOptions.map((species) => ({
+                value: species,
+                label: species,
+              }))}
+              placeholder="예: 광어, 대게"
+              value={query}
+              onChange={updateQuery}
             />
           </LabeledField>
 

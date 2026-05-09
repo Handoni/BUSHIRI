@@ -1,6 +1,7 @@
 import {
   useId,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type PropsWithChildren,
@@ -384,6 +385,7 @@ export function SearchCombobox({
   emptyMessage?: string
 }) {
   const listboxId = useId()
+  const anchorRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const normalizedValue = value.trim().toLowerCase()
   const visibleOptions = useMemo(() => {
@@ -406,13 +408,14 @@ export function SearchCombobox({
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Anchor asChild>
-        <div className="relative min-w-0">
+        <div className="relative min-w-0" ref={anchorRef}>
           <input
             aria-autocomplete="list"
             aria-controls={listboxId}
             aria-expanded={open}
             aria-label={ariaLabel}
             className={cn(controlClass, 'pr-10')}
+            onClick={() => setOpen(true)}
             onChange={(event) => {
               onChange(event.target.value)
               setOpen(true)
@@ -459,6 +462,11 @@ export function SearchCombobox({
             scrollableDropdownSurfaceClass,
             'max-h-[min(20rem,var(--radix-popover-content-available-height))] p-1',
           )}
+          onInteractOutside={(event) => {
+            if (event.target && anchorRef.current?.contains(event.target as Node)) {
+              event.preventDefault()
+            }
+          }}
           onOpenAutoFocus={(event) => event.preventDefault()}
           sideOffset={4}
           style={{ width: 'var(--radix-popover-trigger-width, 22rem)' } as CSSProperties}
