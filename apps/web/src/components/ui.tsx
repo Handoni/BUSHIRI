@@ -6,6 +6,7 @@ import {
   type PropsWithChildren,
   type ReactNode,
 } from 'react'
+import { Check, ChevronDown } from 'lucide-react'
 import * as Checkbox from '@radix-ui/react-checkbox'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import * as Popover from '@radix-ui/react-popover'
@@ -322,11 +323,14 @@ export function SelectControl({
     <Select.Root value={value} onValueChange={onChange}>
       <Select.Trigger
         aria-label={ariaLabel}
-        className={cn(controlClass, 'inline-flex items-center justify-between gap-3 font-bold')}
+        className={cn(controlClass, 'group inline-flex items-center justify-between gap-3 font-bold')}
       >
         <Select.Value placeholder={placeholder} />
-        <Select.Icon className="shrink-0 text-xs font-extrabold text-bushiri-muted" aria-hidden="true">
-          v
+        <Select.Icon className="shrink-0 text-bushiri-muted" aria-hidden="true">
+          <ChevronDown
+            className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180"
+            strokeWidth={2.4}
+          />
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
@@ -344,7 +348,9 @@ export function SelectControl({
                 value={option.value}
               >
                 <Select.ItemText>{option.label}</Select.ItemText>
-                <Select.ItemIndicator className="absolute right-3 h-2 w-2 rounded-sm bg-bushiri-primary" />
+                <Select.ItemIndicator className="absolute right-3 inline-flex h-4 w-4 items-center justify-center text-bushiri-primary">
+                  <Check className="h-4 w-4" strokeWidth={2.7} />
+                </Select.ItemIndicator>
               </Select.Item>
             ))}
           </Select.Viewport>
@@ -436,7 +442,11 @@ export function SearchCombobox({
             onMouseDown={(event) => event.preventDefault()}
             type="button"
           >
-            v
+            <ChevronDown
+              aria-hidden="true"
+              className={cn('h-4 w-4 transition-transform duration-200', open ? 'rotate-180' : '')}
+              strokeWidth={2.4}
+            />
           </button>
         </div>
       </Popover.Anchor>
