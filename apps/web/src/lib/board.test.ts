@@ -175,9 +175,9 @@ describe('buildTodayBoard', () => {
     expect(board.rows[0].cells['성전물산']).toHaveLength(1)
     expect(board.rows[0].cells['성전물산'][0]).toMatchObject({
       price: 33000,
-      variantLabel: '국내산 · 자연산 · 활어',
+      variantLabel: '활어',
       weightLabel: '1.7~2kg',
-      statusTags: ['국내산', '자연산', '활어'],
+      statusTags: ['활어'],
     })
   })
 
@@ -235,14 +235,14 @@ describe('buildTodayBoard', () => {
 
     expect(japanScallop).toMatchObject({
       price: 27000,
-      variantLabel: '일본산',
-      statusTags: ['일본산'],
+      variantLabel: '기본',
+      statusTags: [],
     })
     expect(domesticScallop).toMatchObject({
       price: 9000,
-      variantLabel: '국내산 · 홍가리비',
+      variantLabel: '홍가리비',
       weightLabel: '중량 미상',
-      statusTags: ['품절', '국내산', '홍가리비'],
+      statusTags: ['품절', '홍가리비'],
     })
   })
 
@@ -358,7 +358,7 @@ describe('buildTodayBoard', () => {
       vendor: '참조은수산',
       listing: {
         price: 25000,
-        statusTags: ['국내산'],
+        statusTags: [],
         weightLabel: '0.8~1kg',
       },
     })

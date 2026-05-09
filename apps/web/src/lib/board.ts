@@ -92,6 +92,21 @@ function splitGrade(value: unknown): string[] {
     .filter(Boolean)
 }
 
+function isOriginClassificationTag(value: string): boolean {
+  return (
+    /산$/.test(value) ||
+    /^(노르웨이|러시아|양식|낚시바리)$/.test(value)
+  )
+}
+
+function pushDisplayTag(tags: string[], value: string | null | undefined) {
+  if (!value || isOriginClassificationTag(value)) {
+    return
+  }
+
+  pushUnique(tags, value)
+}
+
 function descriptorTags(row: BoardInputRow, raw: Record<string, unknown>): string[] {
   const haystack = [
     row.species,
@@ -125,7 +140,6 @@ function descriptorTags(row: BoardInputRow, raw: Record<string, unknown>): strin
     '최상급',
     '상태최강',
     '정품',
-    '낚시바리',
     '땅크',
     '예약판매',
     '갓성비',
@@ -133,12 +147,12 @@ function descriptorTags(row: BoardInputRow, raw: Record<string, unknown>): strin
 
   descriptors.forEach((descriptor) => {
     if (compactText.includes(descriptor.replace(/\s+/g, ''))) {
-      pushUnique(tags, descriptor)
+      pushDisplayTag(tags, descriptor)
     }
   })
 
   const numbered = compactText.match(/[1-9]번/g) ?? []
-  numbered.forEach((numberTag) => pushUnique(tags, numberTag))
+  numbered.forEach((numberTag) => pushDisplayTag(tags, numberTag))
 
   return tags
 }
@@ -162,11 +176,9 @@ function structuredTags(
     tags.push('이벤트')
   }
 
-  pushUnique(tags, stringValue(raw.origin))
-  pushUnique(tags, stringValue(raw.productionType))
-  pushUnique(tags, normalizeFreshness(raw.freshnessState))
-  splitGrade(raw.grade).forEach((grade) => pushUnique(tags, grade))
-  descriptorTags(row, raw).forEach((tag) => pushUnique(tags, tag))
+  pushDisplayTag(tags, normalizeFreshness(raw.freshnessState))
+  splitGrade(raw.grade).forEach((grade) => pushDisplayTag(tags, grade))
+  descriptorTags(row, raw).forEach((tag) => pushDisplayTag(tags, tag))
 
   return tags
 }
