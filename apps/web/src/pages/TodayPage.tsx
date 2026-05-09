@@ -199,7 +199,7 @@ function SpeciesLabel({
 }) {
   if (showCountryFlag) {
     return (
-      <span className="grid min-w-0 grid-cols-[1.3rem_minmax(0,1fr)_auto] items-center gap-1.5 leading-tight lg:grid-cols-[1.45rem_minmax(0,1fr)_auto] lg:gap-2">
+      <span className="grid min-w-0 grid-rows-[auto_auto_auto] justify-items-start gap-1 leading-tight">
         <span
           aria-label={row.speciesCountryLabel ?? '국가 미상'}
           className="text-base leading-none lg:text-lg"
@@ -558,7 +558,7 @@ export function TodayPage() {
                   <div className="hidden min-w-0 max-h-[min(72dvh,760px)] overflow-y-auto overflow-x-hidden rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:block">
                     <table className="w-full table-fixed border-separate border-spacing-0 text-left">
                       <colgroup>
-                        <col className={showSpeciesCountryFlag ? 'w-[150px] lg:w-[180px]' : 'w-[72px] lg:w-[92px]'} />
+                        <col className={showSpeciesCountryFlag ? 'w-[86px] lg:w-[104px]' : 'w-[72px] lg:w-[92px]'} />
                         {section.vendorColumns.map((vendor) => (
                           <col key={vendor} />
                         ))}
@@ -628,7 +628,7 @@ export function TodayPage() {
                       className={cn(
                         'sticky top-0 z-[2] grid items-center gap-3 border-b border-bushiri-ink/15 bg-bushiri-surface-muted p-3 text-[0.76rem] font-extrabold text-bushiri-muted',
                         showSpeciesCountryFlag
-                          ? 'grid-cols-[minmax(132px,0.48fr)_minmax(0,1fr)]'
+                          ? 'grid-cols-[88px_minmax(0,1fr)]'
                           : 'grid-cols-[76px_minmax(0,1fr)]',
                       )}
                       aria-hidden="true"
@@ -653,7 +653,7 @@ export function TodayPage() {
                             className={cn(
                               'grid w-full items-center gap-3 bg-bushiri-surface/90 p-3 text-left text-bushiri-ink transition hover:bg-white focus-visible:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bushiri-primary active:translate-y-px',
                               showSpeciesCountryFlag
-                                ? 'grid-cols-[minmax(132px,0.48fr)_minmax(0,1fr)]'
+                                ? 'grid-cols-[88px_minmax(0,1fr)]'
                                 : 'grid-cols-[76px_minmax(0,1fr)]',
                               isExpanded ? 'bg-white' : '',
                             )}
