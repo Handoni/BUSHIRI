@@ -45,6 +45,7 @@ function mapTodayRow(row: Record<string, unknown>) {
     unit: row.unit === null ? null : String(row.unit),
     pricePerKg: row.price_per_kg === null ? null : Number(row.price_per_kg),
     priceText: row.price_text === null ? null : String(row.price_text),
+    speciesSortOrder: Number(row.species_sort_order ?? 999),
     soldOut: Boolean(row.sold_out),
     eventFlag: Boolean(row.event_flag),
     halfAvailable: Boolean(row.half_available),
@@ -162,11 +163,13 @@ async function getMarketToday(db: D1DatabaseBinding, date: string) {
       `SELECT i.id, i.source_id, s.vendor_name, i.market_date, i.category, i.canonical_name, i.display_name, i.origin,
               i.origin_country, i.origin_detail, i.production_type, i.freshness_state, i.grade, i.size_min_kg, i.size_max_kg, i.unit, i.price_per_kg,
               i.price_text, i.sold_out, i.event_flag, i.half_available, i.packing_note, i.notes,
-              i.best_condition_flag, i.lowest_price_flag, i.ai_recommendation_flag
+              i.best_condition_flag, i.lowest_price_flag, i.ai_recommendation_flag,
+              COALESCE(o.sort_order, 999) AS species_sort_order
        FROM item_snapshots i
        JOIN sources s ON s.id = i.source_id
+       LEFT JOIN species_sort_orders o ON o.canonical_name = i.canonical_name
        WHERE i.market_date = ?1
-       ORDER BY i.id ASC`
+       ORDER BY species_sort_order ASC, i.canonical_name ASC, i.id ASC`
     )
     .bind(date)
     .all()
@@ -215,12 +218,14 @@ async function getInsights(db: D1DatabaseBinding, date: string) {
 async function getSpeciesProfiles(db: D1DatabaseBinding) {
   const result = await db
     .prepare(
-      `SELECT canonical_name, category, korean_name, scientific_name, english_name, aliases,
+      `SELECT p.canonical_name, p.category, p.korean_name, p.scientific_name, p.english_name, p.aliases,
               season_months, season_note, market_weight_note, habitat_note, taste_note, buying_note,
-              photo_url, photo_source_url, photo_attribution, photo_license, info_sources, sort_order
-       FROM species_profiles
-       WHERE category IN ('fish', 'salmon')
-       ORDER BY sort_order ASC, canonical_name ASC`
+              photo_url, photo_source_url, photo_attribution, photo_license, info_sources,
+              COALESCE(o.sort_order, p.sort_order, 999) AS sort_order
+       FROM species_profiles p
+       LEFT JOIN species_sort_orders o ON o.canonical_name = p.canonical_name
+       WHERE p.category IN ('fish', 'salmon')
+       ORDER BY COALESCE(o.sort_order, p.sort_order, 999) ASC, p.canonical_name ASC`
     )
     .all()
 
@@ -231,14 +236,16 @@ async function getSpeciesProfile(db: D1DatabaseBinding, canonicalName: string) {
   const normalizedName = canonicalName === '황금광어' ? '광어' : canonicalName
   const result = await db
     .prepare(
-      `SELECT canonical_name, category, korean_name, scientific_name, english_name, aliases,
+      `SELECT p.canonical_name, p.category, p.korean_name, p.scientific_name, p.english_name, p.aliases,
               season_months, season_note, market_weight_note, habitat_note, taste_note, buying_note,
-              photo_url, photo_source_url, photo_attribution, photo_license, info_sources, sort_order
-       FROM species_profiles
-       WHERE canonical_name = ?1
+              photo_url, photo_source_url, photo_attribution, photo_license, info_sources,
+              COALESCE(o.sort_order, p.sort_order, 999) AS sort_order
+       FROM species_profiles p
+       LEFT JOIN species_sort_orders o ON o.canonical_name = ?2
+       WHERE p.canonical_name = ?1
        LIMIT 1`
     )
-    .bind(normalizedName)
+    .bind(normalizedName, canonicalName)
     .first()
 
   return result ? mapSpeciesProfileRow(result) : null

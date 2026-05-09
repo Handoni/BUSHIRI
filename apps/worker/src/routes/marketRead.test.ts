@@ -125,7 +125,7 @@ function createFakeEnv(): Env {
 }
 
 describe('market and admin read routes', () => {
-  it('requests market today rows in snapshot insertion order', async () => {
+  it('requests market today rows by species sort order', async () => {
     const preparedQueries: string[] = []
     const db: D1DatabaseBinding = {
       prepare(query: string): D1PreparedStatement {
@@ -153,7 +153,7 @@ describe('market and admin read routes', () => {
       DB: db
     })
 
-    expect(preparedQueries[0]).toContain('ORDER BY i.id ASC')
+    expect(preparedQueries[0]).toContain('ORDER BY species_sort_order ASC')
   })
 
   it('returns market today snapshots', async () => {

@@ -15,6 +15,7 @@ export const UNKNOWN_ORIGIN_LABEL = '원산지 미상'
 export type TodayBoardRow = {
   key: string
   canonicalName: string
+  speciesSortOrder: number
   speciesLabel: string
   speciesCountryLabel: string
   speciesOriginLabel: string | null
@@ -212,6 +213,7 @@ type BoardInputRow = {
   id?: string
   canonicalName: string
   species: string
+  speciesSortOrder?: number
   source: string
   price: number | null
   raw: unknown
@@ -290,6 +292,7 @@ type WorkingSection = {
   rowsBySpecies: Map<string, TodayBoardRow>
   speciesByVendor: Map<string, string[]>
   firstSeenOrder: Map<string, number>
+  sortOrderBySpecies: Map<string, number>
   vendorsInData: string[]
 }
 
@@ -299,6 +302,7 @@ function createWorkingSection(key: TodayBoardSectionKey): WorkingSection {
     rowsBySpecies: new Map(),
     speciesByVendor: new Map(),
     firstSeenOrder: new Map(),
+    sortOrderBySpecies: new Map(),
     vendorsInData: [],
   }
 }
@@ -316,6 +320,14 @@ function speciesRowKey(row: BoardInputRow, raw: Record<string, unknown>): string
   return `${row.canonicalName}|${originCountry}|${originDetail}`
 }
 
+function numberValue(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function speciesSortOrder(row: BoardInputRow, raw: Record<string, unknown>): number {
+  return numberValue(row.speciesSortOrder) ?? numberValue(raw.speciesSortOrder) ?? 999
+}
+
 function vendorColumnsForSection(section: WorkingSection): string[] {
   const config = sectionConfigByKey.get(section.key)
   const preferred = config?.vendorOrder ?? []
@@ -324,11 +336,12 @@ function vendorColumnsForSection(section: WorkingSection): string[] {
   return [...preferred, ...extras]
 }
 
-function orderedRowsForSection(
+function orderKeysByVendor(
   section: WorkingSection,
   vendorColumns: string[],
-): TodayBoardRow[] {
-  const unseen = new Set(section.rowsBySpecies.keys())
+  keys: string[],
+): string[] {
+  const unseen = new Set(keys)
   const orderedKeys: string[] = []
 
   while (unseen.size > 0) {
@@ -367,6 +380,29 @@ function orderedRowsForSection(
   }
 
   return orderedKeys
+}
+
+function orderedRowsForSection(
+  section: WorkingSection,
+  vendorColumns: string[],
+): TodayBoardRow[] {
+  const keysBySortOrder = Array.from(section.rowsBySpecies.keys()).reduce<Map<number, string[]>>(
+    (groups, key) => {
+      const sortOrder = section.sortOrderBySpecies.get(key) ?? 999
+      const keys = groups.get(sortOrder) ?? []
+
+      keys.push(key)
+      groups.set(sortOrder, keys)
+
+      return groups
+    },
+    new Map(),
+  )
+  const orderedKeys = Array.from(keysBySortOrder.entries())
+    .sort(([leftOrder], [rightOrder]) => leftOrder - rightOrder)
+    .flatMap(([, keys]) => orderKeysByVendor(section, vendorColumns, keys))
+
+  return orderedKeys
     .reduce<string[]>((groupedKeys, species) => {
       const row = section.rowsBySpecies.get(species)
 
@@ -394,6 +430,7 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
     const sectionKey = sectionKeyForSource(row.source)
     const section = workingSections.get(sectionKey) ?? createWorkingSection(sectionKey)
     const rowKey = speciesRowKey(row, raw)
+    const rowSortOrder = speciesSortOrder(row, raw)
 
     workingSections.set(sectionKey, section)
     pushUniqueValue(section.vendorsInData, row.source)
@@ -406,10 +443,16 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
       section.firstSeenOrder.set(rowKey, rowIndex)
     }
 
+    section.sortOrderBySpecies.set(
+      rowKey,
+      Math.min(section.sortOrderBySpecies.get(rowKey) ?? 999, rowSortOrder),
+    )
+
     if (!section.rowsBySpecies.has(rowKey)) {
       section.rowsBySpecies.set(rowKey, {
         key: `${sectionKey}-${rowKey}`,
         canonicalName: row.canonicalName,
+        speciesSortOrder: rowSortOrder,
         speciesLabel: row.canonicalName,
         speciesCountryLabel: originCountryLabel(raw),
         speciesOriginLabel: stringValue(raw.originDetail),
@@ -422,6 +465,8 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
     if (!target) {
       return
     }
+
+    target.speciesSortOrder = Math.min(target.speciesSortOrder, rowSortOrder)
 
     const listings = target.cells[row.source] ?? []
 

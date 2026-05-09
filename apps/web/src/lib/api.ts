@@ -10,6 +10,7 @@ export type MarketRow = {
   highPrice: number | null
   unit: string
   currency: string
+  speciesSortOrder: number
   observedAt: string | null
   source: string
   raw: unknown
@@ -373,6 +374,9 @@ function normalizeMarketRow(value: unknown, index: number): MarketRow {
       getCandidate(record, ['currency', 'currencyCode', 'quoteCurrency']),
       'KRW',
     ),
+    speciesSortOrder: toNumberValue(
+      getCandidate(record, ['speciesSortOrder', 'species_sort_order', 'sortOrder', 'sort_order']),
+    ) ?? 999,
     observedAt: (getCandidate(record, [
       'observedAt',
       'publishedAt',
@@ -393,6 +397,7 @@ function normalizeMarketRow(value: unknown, index: number): MarketRow {
       sizeMaxKg: getCandidate(record, ['sizeMaxKg', 'size_max_kg']),
       unit: getCandidate(record, ['unit', 'priceUnit', 'unitLabel']),
       priceText: getCandidate(record, ['priceText', 'price_text']),
+      speciesSortOrder: getCandidate(record, ['speciesSortOrder', 'species_sort_order', 'sortOrder', 'sort_order']),
       soldOut: getCandidate(record, ['soldOut', 'sold_out']),
       eventFlag: getCandidate(record, ['eventFlag', 'event_flag']),
       halfAvailable: getCandidate(record, ['halfAvailable', 'half_available']),

@@ -13,6 +13,7 @@ export type SpeciesOption = {
 export type SpeciesOptionInput = {
   canonicalName: string
   species: string
+  speciesSortOrder?: number
 }
 
 export type TrendReferenceBadge = {
@@ -461,9 +462,9 @@ function compareKorean(left: string, right: string) {
 }
 
 export function buildSpeciesOptions(rows: SpeciesOptionInput[]): SpeciesOption[] {
-  const deduped = new Map<string, Set<string>>()
+  const deduped = new Map<string, { searchTerms: Set<string>; sortOrder: number; firstSeen: number }>()
 
-  rows.forEach((row) => {
+  rows.forEach((row, index) => {
     const value = stringValue(row.canonicalName)
     const displayName = stringValue(row.species)
 
@@ -471,21 +472,41 @@ export function buildSpeciesOptions(rows: SpeciesOptionInput[]): SpeciesOption[]
       return
     }
 
-    const searchTerms = deduped.get(value) ?? new Set<string>()
-    searchTerms.add(value)
+    const current = deduped.get(value) ?? {
+      searchTerms: new Set<string>(),
+      sortOrder: 999,
+      firstSeen: index,
+    }
+    current.searchTerms.add(value)
 
     if (displayName) {
-      searchTerms.add(displayName)
+      current.searchTerms.add(displayName)
     }
 
-    deduped.set(value, searchTerms)
+    if (typeof row.speciesSortOrder === 'number' && Number.isFinite(row.speciesSortOrder)) {
+      current.sortOrder = Math.min(current.sortOrder, row.speciesSortOrder)
+    }
+
+    deduped.set(value, current)
   })
 
-  return Array.from(deduped.entries()).map(([value, searchTerms]) => ({
-    value,
-    label: value,
-    searchText: Array.from(searchTerms).join(' '),
-  }))
+  return Array.from(deduped.entries())
+    .sort(([leftValue, left], [rightValue, right]) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder
+      }
+
+      if (left.firstSeen !== right.firstSeen) {
+        return left.firstSeen - right.firstSeen
+      }
+
+      return leftValue.localeCompare(rightValue, 'ko')
+    })
+    .map(([value, { searchTerms }]) => ({
+      value,
+      label: value,
+      searchText: Array.from(searchTerms).join(' '),
+    }))
 }
 
 export function filterSpeciesOptions(options: SpeciesOption[], query: string): SpeciesOption[] {

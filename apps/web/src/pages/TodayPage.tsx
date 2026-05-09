@@ -448,7 +448,6 @@ export function TodayPage() {
 
     return Array.from(new Set((section?.rows ?? []).map((row) => row.canonicalName)))
       .filter(Boolean)
-      .sort((left, right) => left.localeCompare(right, 'ko'))
   }, [activeSection, unfilteredBoard.sections])
   const countryOptions = useMemo(() => {
     const countries = Array.from(
