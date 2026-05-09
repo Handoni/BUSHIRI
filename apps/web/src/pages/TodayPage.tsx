@@ -269,7 +269,7 @@ function CountryMultiSelect({
   }
 
   return (
-    <details className="group relative">
+    <details className="group relative z-40">
       <summary
         className={cn(
           inputControlClass,
@@ -284,7 +284,7 @@ function CountryMultiSelect({
           v
         </span>
       </summary>
-      <div className="absolute left-0 top-[calc(100%+0.35rem)] z-30 grid max-h-72 w-full min-w-52 overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface p-1.5 shadow-bushiri-popover">
+      <div className="absolute left-0 top-[calc(100%+0.35rem)] z-50 grid max-h-72 w-full min-w-52 overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface p-1.5 shadow-bushiri-popover">
         <label className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm font-extrabold text-bushiri-ink hover:bg-bushiri-primary/10">
           <input
             checked={allSelected}
@@ -549,7 +549,7 @@ export function TodayPage() {
       <Panel
         title="조회 조건"
         actions={<Button onClick={() => void market.refresh()}>시세 다시 불러오기</Button>}
-        className="py-4"
+        className="relative z-20 py-4"
       >
         <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,0.8fr)] items-end gap-2.5 max-xl:grid-cols-3 max-md:grid-cols-1">
           <LabeledField label="기준일">
@@ -608,7 +608,7 @@ export function TodayPage() {
         </div>
       </Panel>
 
-      <Panel title="종합 시세판" className="overflow-hidden">
+      <Panel title="종합 시세판" className="relative z-0 overflow-hidden">
         {market.isLoading ? <LoadingBlock rows={8} className="board" /> : null}
         {market.error ? (
           <ErrorState
