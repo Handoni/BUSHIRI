@@ -7,7 +7,7 @@ import { getVisibleNavItems } from '../lib/router'
 const appShellSource = readFileSync(new URL('./AppShell.tsx', import.meta.url), 'utf8')
 
 describe('AppShell authentication controls', () => {
-  it('renders public navigation and a login button before authentication', () => {
+  it('renders public navigation and a menu trigger before authentication', () => {
     const markup = renderToStaticMarkup(
       <AppShell
         currentLabel="비교 페이지"
@@ -23,7 +23,8 @@ describe('AppShell authentication controls', () => {
       </AppShell>,
     )
 
-    expect(markup).toContain('로그인')
+    expect(markup).toContain('메뉴 열기')
+    expect(markup).not.toContain('로그인')
     expect(markup).not.toContain('관리자 로그인')
     expect(markup).not.toContain('비밀번호')
     expect(markup).not.toContain('비교 페이지')
@@ -34,7 +35,7 @@ describe('AppShell authentication controls', () => {
     expect(markup).not.toContain('소스 설정')
   })
 
-  it('renders admin navigation and logout controls for an admin session', () => {
+  it('renders admin navigation with account controls kept out of the top bar', () => {
     const markup = renderToStaticMarkup(
       <AppShell
         currentLabel="원문 검수"
@@ -58,9 +59,10 @@ describe('AppShell authentication controls', () => {
       </AppShell>,
     )
 
-    expect(markup).toContain('Admin')
-    expect(markup).toContain('simgip')
-    expect(markup).toContain('로그아웃')
+    expect(markup).toContain('메뉴 열기')
+    expect(markup).not.toContain('Admin')
+    expect(markup).not.toContain('simgip')
+    expect(markup).not.toContain('로그아웃')
     expect(markup).toContain('원문 검수')
     expect(markup).toContain('소스 설정')
   })
@@ -80,12 +82,12 @@ describe('AppShell authentication controls', () => {
     expect(markup).toContain('관리자 계정 정보를 확인해 주세요.')
   })
 
-  it('uses Radix top navigation primitives without sidebar collapse controls', () => {
+  it('uses Radix top navigation primitives with a sidebar menu trigger', () => {
     expect(appShellSource).toContain("@radix-ui/react-navigation-menu")
     expect(appShellSource).not.toContain("@radix-ui/react-collapsible")
     expect(appShellSource).toContain('<NavigationMenu.Root')
     expect(appShellSource).toContain('function TopNavigation')
-    expect(appShellSource).not.toContain('메뉴 접기')
-    expect(appShellSource).not.toContain('메뉴 펼치기')
+    expect(appShellSource).toContain('메뉴 열기')
+    expect(appShellSource).toContain('사이드바 메뉴')
   })
 })

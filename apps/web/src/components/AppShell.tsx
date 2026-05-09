@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type PropsWithChildren } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import * as NavigationMenu from '@radix-ui/react-navigation-menu'
+import { LogOut, Menu, X } from 'lucide-react'
 import type { AuthSession, LoginCredentials } from '../lib/auth'
 import type { AppRoute, NavItem } from '../lib/router'
 import { cn, inputControlClass, surfaceClass } from './ui'
@@ -20,6 +21,7 @@ type TopNavigationProps = {
   currentRoute: AppRoute
   navItems: NavItem[]
   onLogout: () => void
+  onOpenLogin: () => void
   onNavigate: (route: AppRoute) => void
   session: AuthSession | null
 }
@@ -30,29 +32,47 @@ function TopNavigation({
   currentRoute,
   navItems,
   onLogout,
+  onOpenLogin,
   onNavigate,
   session,
 }: TopNavigationProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  function handleMenuNavigate(route: AppRoute) {
+    onNavigate(route)
+    setIsMenuOpen(false)
+  }
+
+  function handleMenuLogin() {
+    setIsMenuOpen(false)
+    onOpenLogin()
+  }
+
+  function handleMenuLogout() {
+    setIsMenuOpen(false)
+    onLogout()
+  }
+
   return (
     <header
       className={cn(
         surfaceClass,
-        'flex min-h-16 items-center gap-6 rounded-xl px-4 py-3 max-lg:flex-wrap max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:px-3',
+        'flex min-h-16 items-center gap-6 rounded-xl px-4 py-3 max-lg:flex-wrap max-md:min-h-14 max-md:gap-3 max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:px-3',
       )}
     >
-      <div className="flex min-w-[132px] shrink-0 items-center gap-3">
+      <div className="flex min-w-[132px] shrink-0 items-center gap-3 max-md:min-w-0">
         <img
           src={bushiriIconSrc}
           className="h-10 w-10 shrink-0 rounded-lg object-contain"
           alt=""
           aria-hidden="true"
         />
-        <span className="block truncate text-lg font-extrabold leading-tight tracking-normal text-bushiri-primary">
+        <span className="block truncate text-lg font-extrabold leading-tight tracking-normal text-bushiri-primary max-md:hidden">
           BUSHIRI
         </span>
       </div>
 
-      <NavigationMenu.Root className="min-w-0 flex-1 max-lg:order-3 max-lg:w-full">
+      <NavigationMenu.Root className="min-w-0 flex-1 max-lg:order-3 max-lg:w-full max-md:hidden">
         <NavigationMenu.List className="flex min-w-0 items-center gap-2 overflow-x-auto">
           {navItems.map((item) => {
             const active = item.route === currentRoute
@@ -89,60 +109,99 @@ function TopNavigation({
         </NavigationMenu.List>
       </NavigationMenu.Root>
 
-      <div className="ml-auto flex shrink-0 items-center gap-3 max-lg:ml-0">
-        {session ? (
-          <>
-            <div className="flex items-center gap-2 rounded-lg border border-bushiri-line/70 bg-bushiri-surface px-2.5 py-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bushiri-primary-soft text-[0.7rem] font-extrabold text-bushiri-primary shadow-inner">
-                {session.username.slice(0, 2).toUpperCase()}
-              </div>
-              <div className="min-w-0 max-md:hidden">
-                <span className="block text-[0.62rem] font-bold uppercase tracking-normal text-bushiri-muted">Admin</span>
-                <span className="block max-w-[120px] truncate text-sm font-semibold text-bushiri-ink">
-                  {session.username}
-                </span>
-              </div>
+      <Dialog.Root open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+        <Dialog.Trigger asChild>
+          <button
+            aria-label="메뉴 열기"
+            className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-bushiri-line/80 bg-bushiri-surface-raised text-bushiri-ink transition duration-200 hover:-translate-y-px hover:bg-bushiri-shell focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px max-lg:ml-0"
+            type="button"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-bushiri-ink/35 backdrop-blur-[2px]" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className={cn(
+              surfaceClass,
+              'fixed bottom-0 right-0 top-0 z-50 flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-5 rounded-l-xl border-y-0 border-r-0 p-4 shadow-bushiri-popover outline-none',
+            )}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-bushiri-line pb-4">
+              <Dialog.Title className="m-0 text-base font-extrabold text-bushiri-ink">메뉴</Dialog.Title>
+              <Dialog.Close asChild>
+                <button
+                  aria-label="메뉴 닫기"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-bushiri-line bg-bushiri-surface text-bushiri-ink transition duration-200 hover:-translate-y-px hover:bg-bushiri-shell focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
+                  type="button"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </Dialog.Close>
             </div>
-            <button
-              aria-label="로그아웃"
-              className={cn(
-                'flex h-10 items-center justify-center rounded-lg border border-bushiri-line/70 bg-bushiri-surface-raised px-3 text-sm font-bold text-bushiri-ink transition duration-200 hover:-translate-y-px hover:bg-bushiri-shell focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px max-md:w-10 max-md:px-0',
+
+            <nav aria-label="사이드바 메뉴" className="flex flex-col gap-2">
+              {navItems.map((item) => {
+                const active = item.route === currentRoute
+
+                return (
+                  <a
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex min-h-11 items-center justify-between rounded-lg px-3 text-sm font-extrabold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px',
+                      active
+                        ? 'bg-bushiri-primary-soft text-bushiri-primary'
+                        : 'text-bushiri-ink hover:bg-bushiri-shell',
+                    )}
+                    href={item.route}
+                    key={item.route}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      handleMenuNavigate(item.route)
+                    }}
+                  >
+                    <span>{item.label}</span>
+                    {active ? <span className="h-2 w-2 rounded-full bg-bushiri-primary" aria-hidden="true" /> : null}
+                  </a>
+                )
+              })}
+            </nav>
+
+            <div className="mt-auto border-t border-bushiri-line pt-4">
+              {session ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3 rounded-lg border border-bushiri-line/70 bg-bushiri-surface px-3 py-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bushiri-primary-soft text-xs font-extrabold text-bushiri-primary shadow-inner">
+                      {session.username.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-[0.66rem] font-bold uppercase text-bushiri-muted">Admin</span>
+                      <span className="block truncate text-sm font-semibold text-bushiri-ink">{session.username}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-bushiri-line/70 bg-bushiri-surface-raised px-4 text-sm font-bold text-bushiri-ink transition duration-200 hover:-translate-y-px hover:bg-bushiri-shell focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
+                    onClick={handleMenuLogout}
+                    type="button"
+                  >
+                    <LogOut className="h-4 w-4 text-bushiri-muted" aria-hidden="true" />
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-bushiri-primary bg-bushiri-primary px-4 text-sm font-extrabold text-white transition duration-200 hover:-translate-y-px hover:bg-bushiri-primary-deep focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
+                  onClick={handleMenuLogin}
+                  type="button"
+                >
+                  로그인
+                </button>
               )}
-              onClick={onLogout}
-              type="button"
-              title="로그아웃"
-            >
-              <span className="max-md:hidden">로그아웃</span>
-              <svg
-                className="hidden text-bushiri-muted max-md:block"
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" x2="9" y1="12" y2="12" />
-              </svg>
-            </button>
-          </>
-        ) : (
-          <Dialog.Trigger asChild>
-            <button
-              className="flex h-10 items-center justify-center rounded-lg border border-bushiri-primary bg-bushiri-primary px-4 text-sm font-extrabold text-white transition duration-200 hover:-translate-y-px hover:bg-bushiri-primary-deep focus-visible:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
-              type="button"
-            >
-              로그인
-            </button>
-          </Dialog.Trigger>
-        )}
-      </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </header>
   )
 }
@@ -169,6 +228,7 @@ export function AppShell({
             currentRoute={currentRoute}
             navItems={navItems}
             onLogout={onLogout}
+            onOpenLogin={() => setIsLoginOpen(true)}
             onNavigate={onNavigate}
             session={session}
           />
