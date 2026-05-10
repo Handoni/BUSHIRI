@@ -22,7 +22,7 @@ export type TodayBoardRow = {
   cells: Record<string, TodayBoardListing[]>
 }
 
-export type TodayBoardSectionKey = 'fish' | 'crustacean'
+export type TodayBoardSectionKey = 'all' | 'fish' | 'crustacean'
 
 export type TodayBoardSection = {
   key: TodayBoardSectionKey
@@ -220,11 +220,18 @@ type BoardInputRow = {
   [key: string]: unknown
 }
 
-const SECTION_CONFIGS: Array<{
+type BoardSectionConfig = {
   key: TodayBoardSectionKey
   label: string
   vendorOrder: string[]
-}> = [
+}
+
+const SECTION_CONFIGS: BoardSectionConfig[] = [
+  {
+    key: 'all',
+    label: '전체',
+    vendorOrder: ['참조은수산', '성전물산', '윤호수산', '줄포상회'],
+  },
   {
     key: 'fish',
     label: '회',
@@ -240,13 +247,20 @@ const SECTION_CONFIGS: Array<{
 const sectionConfigByKey = new Map(
   SECTION_CONFIGS.map((section) => [section.key, section]),
 )
-const sourceSectionByVendor = new Map<string, TodayBoardSectionKey>(
-  SECTION_CONFIGS.flatMap((section) =>
+type SourceBoardSectionKey = Exclude<TodayBoardSectionKey, 'all'>
+type SourceBoardSectionConfig = BoardSectionConfig & { key: SourceBoardSectionKey }
+
+const SOURCE_SECTION_CONFIGS = SECTION_CONFIGS.filter(
+  (section): section is SourceBoardSectionConfig => section.key !== 'all',
+)
+
+const sourceSectionByVendor = new Map<string, SourceBoardSectionKey>(
+  SOURCE_SECTION_CONFIGS.flatMap((section) =>
     section.vendorOrder.map((vendor) => [vendor, section.key] as const),
   ),
 )
 
-function sectionKeyForSource(source: string): TodayBoardSectionKey {
+function sectionKeyForSource(source: string): SourceBoardSectionKey {
   return sourceSectionByVendor.get(source) ?? 'fish'
 }
 
@@ -427,61 +441,64 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
   rows.forEach((row, rowIndex) => {
     const raw = typeof row.raw === 'object' && row.raw !== null ? (row.raw as Record<string, unknown>) : {}
     const tags = variantTags(row, raw)
-    const sectionKey = sectionKeyForSource(row.source)
-    const section = workingSections.get(sectionKey) ?? createWorkingSection(sectionKey)
     const rowKey = speciesRowKey(row, raw)
     const rowSortOrder = speciesSortOrder(row, raw)
+    const targetSectionKeys: TodayBoardSectionKey[] = ['all', sectionKeyForSource(row.source)]
 
-    workingSections.set(sectionKey, section)
-    pushUniqueValue(section.vendorsInData, row.source)
+    targetSectionKeys.forEach((sectionKey) => {
+      const section = workingSections.get(sectionKey) ?? createWorkingSection(sectionKey)
 
-    const vendorSpecies = section.speciesByVendor.get(row.source) ?? []
-    pushUniqueValue(vendorSpecies, rowKey)
-    section.speciesByVendor.set(row.source, vendorSpecies)
+      workingSections.set(sectionKey, section)
+      pushUniqueValue(section.vendorsInData, row.source)
 
-    if (!section.firstSeenOrder.has(rowKey)) {
-      section.firstSeenOrder.set(rowKey, rowIndex)
-    }
+      const vendorSpecies = section.speciesByVendor.get(row.source) ?? []
+      pushUniqueValue(vendorSpecies, rowKey)
+      section.speciesByVendor.set(row.source, vendorSpecies)
 
-    section.sortOrderBySpecies.set(
-      rowKey,
-      Math.min(section.sortOrderBySpecies.get(rowKey) ?? 999, rowSortOrder),
-    )
+      if (!section.firstSeenOrder.has(rowKey)) {
+        section.firstSeenOrder.set(rowKey, rowIndex)
+      }
 
-    if (!section.rowsBySpecies.has(rowKey)) {
-      section.rowsBySpecies.set(rowKey, {
-        key: `${sectionKey}-${rowKey}`,
-        canonicalName: row.canonicalName,
-        speciesSortOrder: rowSortOrder,
-        speciesLabel: row.canonicalName,
-        speciesCountryLabel: originCountryLabel(raw),
-        speciesOriginLabel: stringValue(raw.originDetail),
-        cells: {},
+      section.sortOrderBySpecies.set(
+        rowKey,
+        Math.min(section.sortOrderBySpecies.get(rowKey) ?? 999, rowSortOrder),
+      )
+
+      if (!section.rowsBySpecies.has(rowKey)) {
+        section.rowsBySpecies.set(rowKey, {
+          key: `${sectionKey}-${rowKey}`,
+          canonicalName: row.canonicalName,
+          speciesSortOrder: rowSortOrder,
+          speciesLabel: row.canonicalName,
+          speciesCountryLabel: originCountryLabel(raw),
+          speciesOriginLabel: stringValue(raw.originDetail),
+          cells: {},
+        })
+      }
+
+      const target = section.rowsBySpecies.get(rowKey)
+
+      if (!target) {
+        return
+      }
+
+      target.speciesSortOrder = Math.min(target.speciesSortOrder, rowSortOrder)
+
+      const listings = target.cells[row.source] ?? []
+
+      listings.push({
+        price: row.price,
+        variantLabel: formatVariantLabel(raw, tags),
+        weightLabel: formatWeight(raw),
+        halfAvailable: raw.halfAvailable === true,
+        statusTags: statusTags(row, raw),
+        isBestCondition: raw.bestCondition === true,
+        isLowestPrice: raw.lowestPrice === true,
+        isAiRecommended: raw.aiRecommended === true,
+        raw: row.raw,
       })
-    }
-
-    const target = section.rowsBySpecies.get(rowKey)
-
-    if (!target) {
-      return
-    }
-
-    target.speciesSortOrder = Math.min(target.speciesSortOrder, rowSortOrder)
-
-    const listings = target.cells[row.source] ?? []
-
-    listings.push({
-      price: row.price,
-      variantLabel: formatVariantLabel(raw, tags),
-      weightLabel: formatWeight(raw),
-      halfAvailable: raw.halfAvailable === true,
-      statusTags: statusTags(row, raw),
-      isBestCondition: raw.bestCondition === true,
-      isLowestPrice: raw.lowestPrice === true,
-      isAiRecommended: raw.aiRecommended === true,
-      raw: row.raw,
+      target.cells[row.source] = listings
     })
-    target.cells[row.source] = listings
   })
 
   const sections = SECTION_CONFIGS.flatMap<TodayBoardSection>((config) => {
@@ -516,7 +533,7 @@ export function buildTodayBoard(rows: BoardInputRow[]): TodayBoard {
     })
   })
 
-  const boardRows = sections.flatMap((section) => section.rows)
+  const boardRows = sections.find((section) => section.key === 'all')?.rows ?? sections.flatMap((section) => section.rows)
 
   return {
     vendorColumns,

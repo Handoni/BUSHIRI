@@ -306,6 +306,7 @@ export function LabeledField({
 export type SelectControlOption = {
   value: string
   label: ReactNode
+  textValue?: string
   disabled?: boolean
 }
 
@@ -348,6 +349,7 @@ export function SelectControl({
                 className="relative flex min-h-9 cursor-pointer select-none items-center rounded-md py-2 pl-3 pr-8 text-sm font-bold text-bushiri-ink outline-none transition data-[disabled]:pointer-events-none data-[highlighted]:bg-bushiri-primary-soft data-[state=checked]:bg-bushiri-surface-muted data-[disabled]:opacity-50"
                 disabled={option.disabled}
                 key={option.value}
+                textValue={option.textValue ?? (typeof option.label === 'string' ? option.label : option.value)}
                 value={option.value}
               >
                 <Select.ItemText>{option.label}</Select.ItemText>

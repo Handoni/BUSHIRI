@@ -18,8 +18,9 @@ describe('page-level form controls', () => {
     expect(trendsPage).not.toContain('type="checkbox"')
   })
 
-  it('keeps today species autocomplete in a positioned library popover', () => {
-    expect(todayPage).toContain('<SearchCombobox')
+  it('keeps today vendor filtering in a positioned multiselect popover', () => {
+    expect(todayPage).toContain('<VendorMultiSelect')
+    expect(todayPage).toContain('<details className="group relative z-40 min-w-0">')
     expect(todayPage).not.toContain('<datalist')
   })
 })

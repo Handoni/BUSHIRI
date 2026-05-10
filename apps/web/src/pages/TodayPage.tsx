@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { getTodayMarket } from '../lib/api'
 import {
@@ -6,7 +6,6 @@ import {
   getLowestVendorListing,
   type TodayBoardListing,
   type TodayBoardRow,
-  type TodayBoardSectionKey,
   UNKNOWN_ORIGIN_LABEL,
 } from '../lib/board'
 import {
@@ -15,68 +14,61 @@ import {
   formatRelativeDateInput,
 } from '../lib/format'
 import { useResource } from '../hooks/useResource'
-import { navigateToSpeciesInfo } from './SpeciesInfoPage'
 import {
   Badge,
-  Button,
   EmptyState,
   ErrorState,
   LabeledField,
   LoadingBlock,
   Panel,
-  SearchCombobox,
-  SegmentedControl,
   ToggleSwitch,
   cn,
   inputControlClass,
 } from '../components/ui'
+import { CountryFlag } from '../components/CountryFlag'
+import { VendorAxisBoard } from './today-designs/VendorAxisBoard'
 
-const DEFAULT_BOARD_SECTION: TodayBoardSectionKey = 'fish'
-const BOARD_SECTION_KEYS: TodayBoardSectionKey[] = ['fish', 'crustacean']
+const DEFAULT_BOARD_SECTION = 'all'
+const NO_VENDOR_SELECTION = '__vendor-none__'
 const NO_COUNTRY_SELECTION = '__country-none__'
+const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아', UNKNOWN_ORIGIN_LABEL]
 
 type TodayBoardUrlState = {
-  sectionKey: TodayBoardSectionKey
   selectedDate: string
-  query: string
+  vendors: string[]
   countries: string[]
-}
-
-function parseBoardSection(value: string | null): TodayBoardSectionKey {
-  return BOARD_SECTION_KEYS.includes(value as TodayBoardSectionKey)
-    ? (value as TodayBoardSectionKey)
-    : DEFAULT_BOARD_SECTION
 }
 
 function readTodayBoardUrlState(): TodayBoardUrlState {
   if (typeof window === 'undefined') {
     return {
-      sectionKey: DEFAULT_BOARD_SECTION,
       selectedDate: formatRelativeDateInput(),
-      query: '',
+      vendors: [],
       countries: [],
     }
   }
 
   const searchParams = new URLSearchParams(window.location.search)
   const selectedDate = searchParams.get('date')?.trim() || formatRelativeDateInput()
+  const vendors = searchParams
+    .getAll('vendor')
+    .map((vendor) => vendor.trim())
+    .filter((vendor) => vendor && vendor !== 'all')
   const countries = searchParams
     .getAll('country')
     .map((country) => country.trim())
     .filter((country) => country && country !== 'all')
 
   return {
-    sectionKey: parseBoardSection(searchParams.get('section')),
     selectedDate,
-    query: searchParams.get('q') ?? '',
+    vendors,
     countries,
   }
 }
 
 function replaceTodayBoardUrlState({
-  sectionKey,
   selectedDate,
-  query,
+  vendors,
   countries,
 }: TodayBoardUrlState) {
   if (typeof window === 'undefined') {
@@ -85,7 +77,10 @@ function replaceTodayBoardUrlState({
 
   const url = new URL(window.location.href)
   const searchParams = url.searchParams
-  searchParams.set('section', sectionKey)
+  searchParams.delete('section')
+  searchParams.delete('q')
+  searchParams.delete('country')
+  searchParams.delete('design')
 
   if (selectedDate.trim()) {
     searchParams.set('date', selectedDate)
@@ -93,28 +88,13 @@ function replaceTodayBoardUrlState({
     searchParams.delete('date')
   }
 
-  if (query.trim()) {
-    searchParams.set('q', query)
-  } else {
-    searchParams.delete('q')
-  }
-
+  searchParams.delete('vendor')
+  vendors.forEach((vendor) => searchParams.append('vendor', vendor))
   searchParams.delete('country')
   countries.forEach((country) => searchParams.append('country', country))
 
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
 }
-
-const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
-  국내산: '🇰🇷',
-  일본산: '🇯🇵',
-  중국산: '🇨🇳',
-  노르웨이: '🇳🇴',
-  러시아: '🇷🇺',
-}
-const UNKNOWN_COUNTRY_FLAG = '🏳️'
-
-const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아', UNKNOWN_ORIGIN_LABEL]
 
 function stringValue(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
@@ -124,22 +104,6 @@ function originCountryLabelFromRaw(raw: unknown): string {
   const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {}
 
   return stringValue(record.originCountry) ?? stringValue(record.origin) ?? UNKNOWN_ORIGIN_LABEL
-}
-
-function countryLabel(country: string) {
-  return `${country === UNKNOWN_ORIGIN_LABEL ? UNKNOWN_COUNTRY_FLAG : COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
-}
-
-function CountryFlag({
-  country,
-}: {
-  country: string
-}) {
-  if (country === UNKNOWN_ORIGIN_LABEL) {
-    return <>{UNKNOWN_COUNTRY_FLAG}</>
-  }
-
-  return <>{COUNTRY_FLAG_BY_NAME[country] ?? '•'}</>
 }
 
 function badgeTone(tag: string) {
@@ -252,11 +216,148 @@ function SpeciesLabel({
   )
 }
 
-function CountryMultiSelect({
+function VendorMultiSelect({
+  compact = false,
+  dropdownAlign = 'right',
   options,
   selectedValues,
   onChange,
 }: {
+  compact?: boolean
+  dropdownAlign?: 'left' | 'right'
+  options: Array<{ value: string; label: string }>
+  selectedValues: string[]
+  onChange: (values: string[]) => void
+}) {
+  const orderedValues = options.map((option) => option.value)
+  const selectedVendorValues = selectedValues.filter((value) => orderedValues.includes(value))
+  const noneSelected = selectedValues.includes(NO_VENDOR_SELECTION)
+  const allSelected =
+    !noneSelected &&
+    (selectedVendorValues.length === 0 || selectedVendorValues.length === orderedValues.length)
+  const selectedSet = new Set(selectedVendorValues)
+  const selectedOption = options.find((option) => option.value === selectedVendorValues[0])
+  const selectedLabel = allSelected
+    ? '전체'
+    : noneSelected || selectedVendorValues.length === 0
+      ? '선택 없음'
+      : selectedVendorValues.length === 1
+        ? selectedOption?.label ?? selectedVendorValues[0]
+        : `${selectedVendorValues.length}개 판매처`
+  const compactSelectedLabel = allSelected
+    ? '전체'
+    : noneSelected || selectedVendorValues.length === 0
+      ? '없음'
+      : selectedVendorValues.length === 1
+        ? selectedOption?.label ?? selectedVendorValues[0]
+        : `${selectedVendorValues.length}곳`
+
+  const updateSelected = (nextValues: string[]) => {
+    const orderedNextValues = orderedValues.filter((value) => nextValues.includes(value))
+
+    if (orderedNextValues.length === orderedValues.length) {
+      onChange([])
+      return
+    }
+
+    onChange(orderedNextValues.length === 0 ? [NO_VENDOR_SELECTION] : orderedNextValues)
+  }
+
+  const toggleVendor = (vendor: string) => {
+    if (allSelected) {
+      updateSelected(orderedValues.filter((value) => value !== vendor))
+      return
+    }
+
+    if (selectedSet.has(vendor)) {
+      updateSelected(selectedVendorValues.filter((value) => value !== vendor))
+      return
+    }
+
+    updateSelected([...selectedVendorValues, vendor])
+  }
+
+  return (
+    <details className="group relative z-40 min-w-0">
+      <summary
+        className={cn(
+          inputControlClass,
+          'flex cursor-pointer list-none items-center justify-between gap-3 font-bold [&::-webkit-details-marker]:hidden',
+          compact ? 'min-h-9 gap-1.5 rounded-lg px-1.5 text-[0.78rem]' : '',
+        )}
+      >
+        <span className="min-w-0 truncate">{compact ? compactSelectedLabel : selectedLabel}</span>
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-bushiri-muted transition-transform group-open:rotate-180"
+        >
+          <ChevronDown className="h-4 w-4" strokeWidth={2.4} />
+        </span>
+      </summary>
+      <div
+        className={cn(
+          'absolute top-[calc(100%+0.35rem)] z-50 grid max-h-72 overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface p-1.5 shadow-bushiri-popover',
+          compact
+            ? cn(
+                'w-[min(16rem,calc(100vw-1.5rem))]',
+                dropdownAlign === 'left' ? 'left-0' : 'right-0',
+              )
+            : 'left-0 w-full min-w-52',
+        )}
+      >
+        <label className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm font-extrabold text-bushiri-ink hover:bg-bushiri-primary/10">
+          <input
+            checked={allSelected}
+            className="h-4 w-4 accent-bushiri-primary"
+            onChange={() => onChange(allSelected ? [NO_VENDOR_SELECTION] : [])}
+            type="checkbox"
+          />
+          <span>{allSelected ? '전체 해제' : '전체 선택'}</span>
+        </label>
+        <div className="my-1 h-px bg-bushiri-line" />
+        {options.map((option) => (
+          <label
+            className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm font-bold text-bushiri-ink hover:bg-bushiri-primary/10"
+            key={option.value}
+          >
+            <input
+              checked={allSelected || selectedSet.has(option.value)}
+              className="h-4 w-4 accent-bushiri-primary"
+              onChange={() => toggleVendor(option.value)}
+              type="checkbox"
+            />
+            <span className="min-w-0 truncate">{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </details>
+  )
+}
+
+function CountryOptionLabel({
+  country,
+  className,
+}: {
+  country: string
+  className?: string
+}) {
+  return (
+    <span className={cn('inline-flex min-w-0 items-center gap-1.5', className)}>
+      <CountryFlag country={country} flagClassName="h-3 w-[1.125rem]" />
+      {country !== UNKNOWN_ORIGIN_LABEL ? (
+        <span className="min-w-0 truncate">{country}</span>
+      ) : null}
+    </span>
+  )
+}
+
+function CountryMultiSelect({
+  compact = false,
+  options,
+  selectedValues,
+  onChange,
+}: {
+  compact?: boolean
   options: Array<{ value: string; label: string }>
   selectedValues: string[]
   onChange: (values: string[]) => void
@@ -268,12 +369,15 @@ function CountryMultiSelect({
     !noneSelected &&
     (selectedCountryValues.length === 0 || selectedCountryValues.length === orderedValues.length)
   const selectedSet = new Set(selectedCountryValues)
+  const selectedOption = options.find((option) => option.value === selectedCountryValues[0])
   const selectedLabel = allSelected
-    ? '전체'
+    ? compact
+      ? '국가'
+      : '국가 전체'
     : noneSelected || selectedCountryValues.length === 0
       ? '선택 없음'
       : selectedCountryValues.length === 1
-        ? options.find((option) => option.value === selectedCountryValues[0])?.label ?? selectedCountryValues[0]
+        ? selectedOption?.label ?? selectedCountryValues[0]
         : `${selectedCountryValues.length}개 국가`
 
   const updateSelected = (nextValues: string[]) => {
@@ -302,14 +406,30 @@ function CountryMultiSelect({
   }
 
   return (
-    <details className="group relative z-40">
+    <details className="group relative z-40 min-w-0">
       <summary
         className={cn(
           inputControlClass,
           'flex cursor-pointer list-none items-center justify-between gap-3 font-bold [&::-webkit-details-marker]:hidden',
+          compact ? 'min-h-9 gap-1.5 rounded-lg px-1.5 text-[0.78rem]' : '',
         )}
       >
-        <span className="min-w-0 truncate">{selectedLabel}</span>
+        <span className="min-w-0 truncate">
+          {compact && allSelected ? (
+            '전체'
+          ) : compact && !noneSelected && selectedCountryValues.length === 1 && selectedOption ? (
+            <CountryFlag country={selectedOption.value} flagClassName="h-3 w-[1.125rem]" />
+          ) : compact && !noneSelected && selectedCountryValues.length > 1 ? (
+            <span className="inline-flex min-w-0 items-center gap-0.5">
+              <CountryFlag country={selectedCountryValues[0]} flagClassName="h-3 w-[1.125rem]" />
+              <span className="font-black">+{selectedCountryValues.length - 1}</span>
+            </span>
+          ) : !allSelected && !noneSelected && selectedCountryValues.length === 1 && selectedOption ? (
+            <CountryOptionLabel country={selectedOption.value} />
+          ) : (
+            selectedLabel
+          )}
+        </span>
         <span
           aria-hidden="true"
           className="shrink-0 text-bushiri-muted transition-transform group-open:rotate-180"
@@ -317,7 +437,12 @@ function CountryMultiSelect({
           <ChevronDown className="h-4 w-4" strokeWidth={2.4} />
         </span>
       </summary>
-      <div className="absolute left-0 top-[calc(100%+0.35rem)] z-50 grid max-h-72 w-full min-w-52 overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface p-1.5 shadow-bushiri-popover">
+      <div
+        className={cn(
+          'absolute top-[calc(100%+0.35rem)] z-50 grid max-h-72 overflow-auto rounded-lg border border-bushiri-line bg-bushiri-surface p-1.5 shadow-bushiri-popover',
+          compact ? 'right-0 w-[min(14rem,calc(100vw-1.5rem))]' : 'left-0 w-full min-w-44',
+        )}
+      >
         <label className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm font-extrabold text-bushiri-ink hover:bg-bushiri-primary/10">
           <input
             checked={allSelected}
@@ -339,11 +464,134 @@ function CountryMultiSelect({
               onChange={() => toggleCountry(option.value)}
               type="checkbox"
             />
-            <span className="min-w-0 truncate">{option.label}</span>
+            <CountryOptionLabel country={option.value} />
           </label>
         ))}
       </div>
     </details>
+  )
+}
+
+function formatCompactDateLabel(value: string) {
+  const [yearText, monthText, dayText] = value.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return value
+  }
+
+  const selected = new Date(year, month - 1, day)
+  const today = new Date()
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const yesterday = new Date(todayOnly)
+  yesterday.setDate(todayOnly.getDate() - 1)
+
+  if (selected.getTime() === todayOnly.getTime()) {
+    return '오늘'
+  }
+
+  if (selected.getTime() === yesterday.getTime()) {
+    return '어제'
+  }
+
+  return `${`${month}`.padStart(2, '0')}.${`${day}`.padStart(2, '0')}`
+}
+
+function CompactDateInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const openDatePicker = (input: HTMLInputElement) => {
+    const pickerInput = input as HTMLInputElement & { showPicker?: () => void }
+
+    if (typeof pickerInput.showPicker === 'function') {
+      try {
+        pickerInput.showPicker()
+        return
+      } catch {
+        // Fall through to focus/click for browsers that restrict showPicker.
+      }
+    }
+  }
+
+  return (
+    <label className="relative block min-w-0 cursor-pointer">
+      <span
+        aria-hidden="true"
+        className="pointer-events-none grid h-9 min-h-9 w-full min-w-0 place-items-center rounded-lg border border-bushiri-line bg-bushiri-surface px-1.5 text-[0.76rem] font-black text-bushiri-ink"
+      >
+        {formatCompactDateLabel(value)}
+      </span>
+      <input
+        aria-label="기준일"
+        className="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none rounded-lg border-0 bg-transparent text-transparent caret-transparent [font-size:16px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-datetime-edit]:opacity-0"
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onPointerDown={(event) => openDatePicker(event.currentTarget)}
+      />
+    </label>
+  )
+}
+
+function CompactFilterField({
+  children,
+  label,
+}: {
+  children: ReactNode
+  label: string
+}) {
+  return (
+    <div className="grid min-w-0 gap-0.5">
+      <span className="min-w-0 truncate pl-0.5 text-[0.54rem] font-black leading-none text-bushiri-muted">
+        {label}
+      </span>
+      {children}
+    </div>
+  )
+}
+
+function CompactSoldOutToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <button
+      aria-label={checked ? '품절 제외 중' : '품절 포함 중'}
+      aria-pressed={checked}
+      className={cn(
+        'inline-flex h-9 w-full shrink-0 items-center justify-center rounded-lg border px-1.5 text-[0.68rem] font-black transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px',
+        checked
+          ? 'border-bushiri-primary bg-bushiri-primary text-white'
+          : 'border-bushiri-line bg-bushiri-surface text-bushiri-muted',
+      )}
+      onClick={() => onChange(!checked)}
+      type="button"
+    >
+      <span className="sr-only">품절 제외</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'relative h-4 w-7 rounded-full transition',
+          checked ? 'bg-white/28' : 'bg-bushiri-line-strong/40',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-bushiri-thumb transition-transform',
+            checked ? 'translate-x-3' : 'translate-x-0',
+          )}
+        />
+      </span>
+    </button>
   )
 }
 
@@ -407,9 +655,9 @@ function MarketListingCard({
       </div>
       {listing.statusTags.length > 0 ? (
         <div className="mt-auto flex flex-wrap gap-1">
-          {listing.statusTags.map((tag) => (
+          {listing.statusTags.map((tag, tagIndex) => (
             <Badge
-              key={`${rowKey}-${vendor}-${listingIndex}-${tag}`}
+              key={`${rowKey}-${vendor}-${listingIndex}-${tag}-${tagIndex}`}
               label={tag}
               tone={badgeTone(tag)}
             />
@@ -423,10 +671,18 @@ function MarketListingCard({
 export function TodayPage() {
   const [urlState, setUrlState] = useState(readTodayBoardUrlState)
   const [excludeSoldOut, setExcludeSoldOut] = useState(false)
+  const [isMobileFilterVisible, setIsMobileFilterVisible] = useState(true)
   const [expandedSpeciesKeys, setExpandedSpeciesKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
-  const { sectionKey: activeSection, selectedDate, query, countries } = urlState
+  const mobileFilterRef = useRef<HTMLElement | null>(null)
+  const lastScrollYRef = useRef(0)
+  const lastTouchYRef = useRef<number | null>(null)
+  const {
+    selectedDate,
+    vendors,
+    countries,
+  } = urlState
   const requestedDate = selectedDate.trim() || undefined
   const market = useResource(() => getTodayMarket(requestedDate), [requestedDate])
 
@@ -441,91 +697,216 @@ export function TodayPage() {
     return () => window.removeEventListener('popstate', syncUrlState)
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const mobileQuery = window.matchMedia('(max-width: 767px)')
+    const isMobileViewport = () => mobileQuery.matches || window.innerWidth < 768
+    const getPageScrollY = () =>
+      Math.max(
+        window.scrollY,
+        window.visualViewport?.pageTop ?? 0,
+        document.documentElement.scrollTop,
+        document.body.scrollTop,
+        0,
+      )
+
+    const handleScroll = () => {
+      if (!isMobileViewport()) {
+        setIsMobileFilterVisible(true)
+        lastScrollYRef.current = getPageScrollY()
+        return
+      }
+
+      const currentScrollY = getPageScrollY()
+      const previousScrollY = lastScrollYRef.current
+      const delta = currentScrollY - previousScrollY
+
+      if (currentScrollY <= 8) {
+        setIsMobileFilterVisible(true)
+      } else if (delta > 8) {
+        setIsMobileFilterVisible(false)
+      } else if (delta < -8) {
+        setIsMobileFilterVisible(true)
+      }
+
+      lastScrollYRef.current = currentScrollY
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!isMobileViewport()) {
+        setIsMobileFilterVisible(true)
+        return
+      }
+
+      if (event.deltaY > 8) {
+        setIsMobileFilterVisible(false)
+      } else if (event.deltaY < -8) {
+        setIsMobileFilterVisible(true)
+      }
+    }
+
+    const handleTouchStart = (event: TouchEvent) => {
+      lastTouchYRef.current = event.touches[0]?.clientY ?? null
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!isMobileViewport()) {
+        setIsMobileFilterVisible(true)
+        return
+      }
+
+      const currentTouchY = event.touches[0]?.clientY
+
+      if (currentTouchY === undefined || lastTouchYRef.current === null) {
+        lastTouchYRef.current = currentTouchY ?? null
+        return
+      }
+
+      const delta = lastTouchYRef.current - currentTouchY
+
+      if (delta > 8) {
+        setIsMobileFilterVisible(false)
+      } else if (delta < -8) {
+        setIsMobileFilterVisible(true)
+      }
+
+      lastTouchYRef.current = currentTouchY
+    }
+
+    const handleTouchEnd = () => {
+      lastTouchYRef.current = null
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!isMobileViewport()) {
+        return
+      }
+
+      const target = event.target instanceof Element ? event.target : null
+
+      if (!target || mobileFilterRef.current?.contains(target)) {
+        return
+      }
+
+      if (target.closest('button, input, textarea, select, summary, label, a, [role="button"], [role="switch"], [role="checkbox"]')) {
+        return
+      }
+
+      setIsMobileFilterVisible(true)
+    }
+
+    const scrollTargets: EventTarget[] = [
+      window,
+      document,
+      document.documentElement,
+      document.body,
+    ]
+
+    lastScrollYRef.current = getPageScrollY()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    document.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+    document.documentElement.addEventListener('scroll', handleScroll, { passive: true })
+    document.body.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true })
+    const scrollPollId = window.setInterval(handleScroll, 120)
+
+    return () => {
+      scrollTargets.forEach((target) => {
+        target.removeEventListener('scroll', handleScroll, true)
+        target.removeEventListener('scroll', handleScroll)
+      })
+      window.removeEventListener('wheel', handleWheel)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
+      window.removeEventListener('touchcancel', handleTouchEnd)
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.clearInterval(scrollPollId)
+    }
+  }, [])
+
   const marketRows = market.data?.rows ?? []
   const unfilteredBoard = useMemo(() => buildTodayBoard(marketRows), [marketRows])
-  const speciesOptions = useMemo(() => {
-    const section = unfilteredBoard.sections.find((candidate) => candidate.key === activeSection)
-
-    return Array.from(new Set((section?.rows ?? []).map((row) => row.canonicalName)))
-      .filter(Boolean)
-  }, [activeSection, unfilteredBoard.sections])
-  const countryOptions = useMemo(() => {
-    const countries = Array.from(
-      new Set(
-        marketRows.map((row) => originCountryLabelFromRaw(row.raw)),
-      ),
-    )
-    const orderedCountries = [
-      ...COUNTRY_ORDER.filter((knownCountry) => countries.includes(knownCountry)),
-      ...countries
-        .filter((countryName) => !COUNTRY_ORDER.includes(countryName))
+  const vendorOptions = useMemo(() => {
+    const allSection = unfilteredBoard.sections.find((section) => section.key === DEFAULT_BOARD_SECTION)
+    const vendorsInData = new Set(marketRows.map((row) => row.source))
+    const orderedVendors = [
+      ...(allSection?.vendorColumns ?? []).filter((vendor) => vendorsInData.has(vendor)),
+      ...Array.from(vendorsInData)
+        .filter((vendor) => !(allSection?.vendorColumns ?? []).includes(vendor))
         .sort((left, right) => left.localeCompare(right, 'ko')),
     ]
 
-    return orderedCountries.map((countryName) => ({
-      value: countryName,
-      label: countryLabel(countryName),
+    return orderedVendors.map((vendor) => ({
+      value: vendor,
+      label: vendor,
+    }))
+  }, [marketRows, unfilteredBoard.sections])
+  const countryOptions = useMemo(() => {
+    const countriesInData = Array.from(new Set(marketRows.map((row) => originCountryLabelFromRaw(row.raw))))
+    const orderedCountries = [
+      ...COUNTRY_ORDER.filter((country) => countriesInData.includes(country)),
+      ...countriesInData
+        .filter((country) => !COUNTRY_ORDER.includes(country))
+        .sort((left, right) => left.localeCompare(right, 'ko')),
+    ]
+
+    return orderedCountries.map((country) => ({
+      value: country,
+      label: country,
     }))
   }, [marketRows])
 
   const filteredRows = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+    const orderedVendors = vendorOptions.map((option) => option.value)
+    const selectedVendors = vendors.filter((vendor) => orderedVendors.includes(vendor))
+    const vendorSelectionEmpty = vendors.includes(NO_VENDOR_SELECTION)
+    const allVendorsSelected = selectedVendors.length === 0 || selectedVendors.length === orderedVendors.length
+    const orderedCountries = countryOptions.map((option) => option.value)
+    const selectedCountries = countries.filter((country) => orderedCountries.includes(country))
+    const countrySelectionEmpty = countries.includes(NO_COUNTRY_SELECTION)
+    const allCountriesSelected = selectedCountries.length === 0 || selectedCountries.length === orderedCountries.length
 
     return marketRows.filter((row) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        row.canonicalName.toLowerCase().includes(normalizedQuery)
       const raw =
         typeof row.raw === 'object' && row.raw !== null
           ? (row.raw as Record<string, unknown>)
           : null
       const soldOut = raw?.soldOut === true
+      const matchesVendor =
+        !vendorSelectionEmpty &&
+        (allVendorsSelected || selectedVendors.includes(row.source))
       const originCountry = originCountryLabelFromRaw(row.raw)
-      const countrySelectionEmpty = countries.includes(NO_COUNTRY_SELECTION)
       const matchesCountry =
         !countrySelectionEmpty &&
-        (countries.length === 0 || countries.includes(originCountry))
+        (allCountriesSelected || selectedCountries.includes(originCountry))
 
       return (
-        matchesQuery &&
+        matchesVendor &&
         matchesCountry &&
         (!excludeSoldOut || !soldOut)
       )
     })
-  }, [countries, excludeSoldOut, marketRows, query])
-
-  const sectionCountRows = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-
-    return marketRows.filter((row) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        row.canonicalName.toLowerCase().includes(normalizedQuery)
-      const raw =
-        typeof row.raw === 'object' && row.raw !== null
-          ? (row.raw as Record<string, unknown>)
-          : null
-      const soldOut = raw?.soldOut === true
-
-      return (
-        matchesQuery &&
-        (!excludeSoldOut || !soldOut)
-      )
-    })
-  }, [excludeSoldOut, marketRows, query])
+  }, [countries, countryOptions, excludeSoldOut, marketRows, vendorOptions, vendors])
 
   const board = useMemo(() => buildTodayBoard(filteredRows), [filteredRows])
-  const sectionCountBoard = useMemo(() => buildTodayBoard(sectionCountRows), [sectionCountRows])
   const visibleSections = useMemo(
-    () => board.sections.filter((section) => section.key === activeSection),
-    [activeSection, board.sections],
+    () => board.sections.filter((section) => section.key === DEFAULT_BOARD_SECTION),
+    [board.sections],
   )
   const visibleRows = visibleSections.flatMap((section) => section.rows)
   const showSpeciesCountryFlag =
     new Set(visibleRows.map((row) => row.speciesCountryLabel)).size > 1 ||
     visibleRows.some((row) => row.speciesCountryLabel === UNKNOWN_ORIGIN_LABEL)
 
-  const activeSectionLabel = visibleSections[0]?.label ?? '회'
   const emptyState =
     marketRows.length === 0
       ? {
@@ -534,12 +915,12 @@ export function TodayPage() {
         }
       : visibleRows.length === 0
       ? {
-          title: `${activeSectionLabel} 섹션에 표시할 시세가 없습니다`,
-          description: '다른 섹션을 선택하거나 검색 조건을 조정해 주세요.',
+          title: '표시할 시세가 없습니다',
+          description: '판매처, 국가 선택이나 품절 제외 조건을 조정해 주세요.',
         }
       : {
           title: '현재 조건에 맞는 시세가 없습니다',
-          description: '검색어나 품절 제외 조건을 조정해 주세요.',
+          description: '판매처, 국가 선택이나 품절 제외 조건을 조정해 주세요.',
         }
 
   const updateUrlState = (nextState: Partial<TodayBoardUrlState>) => {
@@ -551,17 +932,13 @@ export function TodayPage() {
     })
   }
 
-  const setSelectedSection = (sectionKey: TodayBoardSectionKey) => {
-    setExpandedSpeciesKeys(new Set())
-    updateUrlState({ sectionKey })
-  }
-
   const updateSelectedDate = (selectedDate: string) => {
     updateUrlState({ selectedDate })
   }
 
-  const updateQuery = (query: string) => {
-    updateUrlState({ query })
+  const updateVendors = (vendors: string[]) => {
+    setExpandedSpeciesKeys(new Set())
+    updateUrlState({ vendors })
   }
 
   const updateCountries = (countries: string[]) => {
@@ -584,13 +961,53 @@ export function TodayPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 md:relative md:left-1/2 md:w-[calc(100vw-2.5rem)] md:max-w-[1760px] md:-translate-x-1/2 md:gap-3">
+      <section
+        aria-label="모바일 시세 필터"
+        className={cn(
+          'sticky top-0 z-30 rounded-xl border border-bushiri-line bg-bushiri-surface/95 p-2 shadow-bushiri-panel backdrop-blur-[10px] transition duration-200 will-change-transform md:hidden',
+          isMobileFilterVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-[calc(100%+0.75rem)] opacity-0',
+        )}
+        ref={mobileFilterRef}
+      >
+        <div className="grid min-w-0 grid-cols-[minmax(3.8rem,0.52fr)_minmax(4.4rem,0.56fr)_minmax(3.8rem,0.46fr)_minmax(2.6rem,auto)] items-end gap-1.5">
+          <CompactFilterField label="날짜">
+            <CompactDateInput
+              value={selectedDate}
+              onChange={updateSelectedDate}
+            />
+          </CompactFilterField>
+          <CompactFilterField label="판매처">
+            <VendorMultiSelect
+              compact
+              dropdownAlign="left"
+              options={vendorOptions}
+              selectedValues={vendors}
+              onChange={updateVendors}
+            />
+          </CompactFilterField>
+          <CompactFilterField label="국가">
+            <CountryMultiSelect
+              compact
+              options={countryOptions}
+              selectedValues={countries}
+              onChange={updateCountries}
+            />
+          </CompactFilterField>
+          <CompactFilterField label="품절">
+            <CompactSoldOutToggle
+              checked={excludeSoldOut}
+              onChange={setExcludeSoldOut}
+            />
+          </CompactFilterField>
+        </div>
+      </section>
+
       <Panel
         title="조회 조건"
-        actions={<Button onClick={() => void market.refresh()}>시세 다시 불러오기</Button>}
-        className="relative z-20 py-4"
+        className="relative z-20 hidden py-4 md:block md:p-3 md:[&>header]:hidden"
       >
-        <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)] items-end gap-2.5 max-xl:grid-cols-3 max-md:grid-cols-1">
+        <div className="grid items-end gap-2.5 md:grid-cols-[minmax(132px,0.72fr)_minmax(190px,1fr)_minmax(170px,0.82fr)_minmax(142px,0.62fr)] md:[&>div>span:first-child]:hidden md:[&>label>span:first-child]:hidden max-md:grid-cols-1 max-md:[&>div>span:first-child]:inline max-md:[&>label>span:first-child]:inline">
           <LabeledField label="기준일">
             <input
               className={inputControlClass}
@@ -600,29 +1017,11 @@ export function TodayPage() {
             />
           </LabeledField>
 
-          <LabeledField label="분류" as="div">
-            <SegmentedControl
-              ariaLabel="시세판 섹션 선택"
-              items={sectionCountBoard.sections.map((section) => ({
-                value: section.key,
-                label: section.label,
-                detail: formatNumber(section.rows.length),
-              }))}
-              value={activeSection}
-              onChange={(sectionKey) => setSelectedSection(sectionKey as TodayBoardSectionKey)}
-            />
-          </LabeledField>
-
-          <LabeledField label="어종 검색" as="div">
-            <SearchCombobox
-              ariaLabel="어종 검색"
-              options={speciesOptions.map((species) => ({
-                value: species,
-                label: species,
-              }))}
-              placeholder="예: 광어, 대게"
-              value={query}
-              onChange={updateQuery}
+          <LabeledField label="판매처" as="div">
+            <VendorMultiSelect
+              options={vendorOptions}
+              selectedValues={vendors}
+              onChange={updateVendors}
             />
           </LabeledField>
 
@@ -643,11 +1042,13 @@ export function TodayPage() {
               onLabel="제외"
             />
           </LabeledField>
-
         </div>
       </Panel>
 
-      <Panel title="종합 시세판" className="relative z-0 overflow-hidden">
+      <Panel
+        title="종합 시세판"
+        className="relative z-0 overflow-hidden md:p-3 md:[&>header]:mb-2 md:[&>header]:pb-2"
+      >
         {market.isLoading ? <LoadingBlock rows={8} className="board" /> : null}
         {market.error ? (
           <ErrorState
@@ -666,7 +1067,7 @@ export function TodayPage() {
               <div className="grid gap-5">
                 {visibleSections.map((section) => (
                   <section key={section.key} className="grid gap-2">
-                  <header className="flex items-end justify-between gap-3 border-b border-bushiri-ink/15 pb-2">
+                  <header className="flex items-end justify-between gap-3 border-b border-bushiri-ink/15 pb-2 md:hidden">
                     <h3 className="m-0 text-base font-extrabold leading-tight text-bushiri-ink">
                       {section.label}
                     </h3>
@@ -675,83 +1076,13 @@ export function TodayPage() {
                     </span>
                   </header>
 
-                  <div className="hidden min-w-0 max-h-[min(72dvh,760px)] overflow-y-auto overflow-x-hidden rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:block">
-                    <table className="w-full table-fixed border-separate border-spacing-0 text-left">
-                      <colgroup>
-                        <col className={showSpeciesCountryFlag ? 'w-[86px] lg:w-[104px]' : 'w-[72px] lg:w-[92px]'} />
-                        {section.vendorColumns.map((vendor) => (
-                          <col key={vendor} />
-                        ))}
-                      </colgroup>
-                      <thead>
-                        <tr>
-                          <th className="sticky top-0 z-[3] border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted px-2 py-3 text-[0.72rem] font-bold uppercase tracking-normal text-bushiri-muted lg:px-4 lg:text-[0.76rem]">
-                            어종
-                          </th>
-                          {section.vendorColumns.map((vendor) => (
-                            <th
-                              key={vendor}
-                              className="sticky top-0 z-[3] border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted p-2 text-[0.76rem] font-bold tracking-normal text-bushiri-ink-soft [overflow-wrap:anywhere] last:border-r-0 lg:p-3 lg:text-[0.84rem]"
-                              title={vendor}
-                              aria-label={vendor}
-                            >
-                              {vendor}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {section.rows.map((row) => (
-                          <tr key={row.key} className="align-top">
-                            <th scope="row" className="border-r border-b border-bushiri-ink/15 bg-bushiri-surface-muted/90 p-2 align-middle last:border-b-0 lg:p-3">
-                              <button
-                                aria-label={`${row.canonicalName} 어종 정보 보기`}
-                                className="grid min-h-16 w-full min-w-0 place-items-start text-left transition hover:text-bushiri-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
-                                onClick={() => navigateToSpeciesInfo(row.canonicalName)}
-                                title={`${row.canonicalName} 어종 정보 보기`}
-                                type="button"
-                              >
-                                <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
-                              </button>
-                            </th>
-                            {section.vendorColumns.map((vendor) => {
-                              const listings = row.cells[vendor] ?? []
-
-                              return (
-                                <td
-                                  key={`${row.key}-${vendor}`}
-                                  className={cn(
-                                    'border-r border-b border-bushiri-ink/15 p-0 last:border-r-0',
-                                    listings.length === 0
-                                      ? 'empty-market-cell bg-bushiri-ink/[0.07]'
-                                      : '',
-                                  )}
-                                >
-                                  {listings.length > 0 ? (
-                                    <div className="flex min-h-28 min-w-0 flex-col gap-2 bg-bushiri-surface/60 p-1.5 lg:p-2">
-                                      {listings.map((listing, listingIndex) => (
-                                        <MarketListingCard
-                                          key={`${row.key}-${vendor}-${listing.variantLabel}-${listingIndex}`}
-                                          listing={listing}
-                                          listingIndex={listingIndex}
-                                          rowKey={row.key}
-                                          vendor={vendor}
-                                        />
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="min-h-28" aria-hidden="true" />
-                                  )}
-                                </td>
-                              )
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="hidden min-w-0 md:block">
+                    <VendorAxisBoard
+                      section={section}
+                    />
                   </div>
 
-                  <div className="max-h-[min(72dvh,760px)] overflow-auto rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:hidden" aria-label={`${section.label} 어종별 최저가 시세판`}>
+                  <div className="rounded-lg border border-bushiri-ink/15 bg-bushiri-surface/95 md:hidden" aria-label={`${section.label} 어종별 최저가 시세판`}>
                     <div
                       className={cn(
                         'sticky top-0 z-[2] grid items-center gap-3 border-b border-bushiri-ink/15 bg-bushiri-surface-muted p-3 text-[0.76rem] font-extrabold text-bushiri-muted',
@@ -785,14 +1116,9 @@ export function TodayPage() {
                               isExpanded ? 'bg-white' : '',
                             )}
                           >
-                            <button
-                              aria-label={`${row.canonicalName} 어종 정보 보기`}
-                              className="min-w-0 text-left transition hover:text-bushiri-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bushiri-primary active:translate-y-px"
-                              onClick={() => navigateToSpeciesInfo(row.canonicalName)}
-                              type="button"
-                            >
+                            <div className="min-w-0 text-left">
                               <SpeciesLabel row={row} showCountryFlag={showSpeciesCountryFlag} />
-                            </button>
+                            </div>
                             <button
                               aria-expanded={isExpanded}
                               aria-label={`${row.canonicalName} 판매처별 시세 ${isExpanded ? '접기' : '펼치기'}`}

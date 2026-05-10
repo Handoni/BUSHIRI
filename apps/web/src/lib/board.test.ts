@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildTodayBoard, getLowestVendorListing } from './board'
 
 describe('buildTodayBoard', () => {
-  it('splits fish and crustacean sections with fixed vendor columns and interleaved supplier order', () => {
+  it('builds an all section plus fish and crustacean sections with fixed vendor columns', () => {
     const board = buildTodayBoard([
       {
         id: '1',
@@ -118,24 +118,32 @@ describe('buildTodayBoard', () => {
       },
     ])
 
-    expect(board.sections).toHaveLength(2)
+    expect(board.sections).toHaveLength(3)
     expect(board.sections[0]).toMatchObject({
+      key: 'all',
+      label: '전체',
+      vendorColumns: ['참조은수산', '성전물산', '윤호수산', '줄포상회'],
+    })
+    expect(board.sections[0].rows.map((row) => row.canonicalName)).toEqual(
+      expect.arrayContaining(['도다리', '광어', '농어', '참돔', '대게', '킹크랩']),
+    )
+    expect(board.sections[1]).toMatchObject({
       key: 'fish',
       label: '회',
       vendorColumns: ['참조은수산', '성전물산', '윤호수산'],
     })
-    expect(board.sections[0].rows.map((row) => row.canonicalName)).toEqual([
+    expect(board.sections[1].rows.map((row) => row.canonicalName)).toEqual([
       '도다리',
       '광어',
       '농어',
       '참돔',
     ])
-    expect(board.sections[1]).toMatchObject({
+    expect(board.sections[2]).toMatchObject({
       key: 'crustacean',
       label: '갑각류',
       vendorColumns: ['줄포상회'],
     })
-    expect(board.sections[1].rows.map((row) => row.canonicalName)).toEqual([
+    expect(board.sections[2].rows.map((row) => row.canonicalName)).toEqual([
       '대게',
       '킹크랩',
     ])

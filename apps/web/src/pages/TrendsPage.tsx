@@ -41,6 +41,7 @@ import {
   SearchCombobox,
   SelectControl,
 } from '../components/ui'
+import { CountryFlagLabel } from '../components/CountryFlag'
 import { bushiriColors, trendChartColors } from '../lib/designSystem'
 
 const DAY_OPTIONS = [14, 30, 60, 90]
@@ -49,14 +50,6 @@ const EMPTY_CLASSIFICATION_VALUE = '__classification-empty__'
 const UNKNOWN_ORIGIN_LABEL = '원산지 미상'
 const UNKNOWN_CLASSIFICATION_LABEL = '분류 미상'
 const COUNTRY_ORDER = ['국내산', '일본산', '중국산', '노르웨이', '러시아']
-const COUNTRY_FLAG_BY_NAME: Record<string, string> = {
-  국내산: '🇰🇷',
-  일본산: '🇯🇵',
-  중국산: '🇨🇳',
-  노르웨이: '🇳🇴',
-  러시아: '🇷🇺',
-}
-const UNKNOWN_COUNTRY_FLAG = '🏳️'
 
 function getSeriesColor(index: number) {
   return trendChartColors[index % trendChartColors.length]
@@ -105,7 +98,7 @@ function getRawCandidate(raw: Record<string, unknown>, keys: string[]): unknown 
 }
 
 function countryLabel(country: string) {
-  return `${country === UNKNOWN_ORIGIN_LABEL ? UNKNOWN_COUNTRY_FLAG : COUNTRY_FLAG_BY_NAME[country] ?? '•'} ${country}`
+  return <CountryFlagLabel country={country} />
 }
 
 function originCountryForPoint(point: { raw: unknown }): string {
@@ -189,6 +182,7 @@ function buildOriginOptions(points: Array<{ raw: unknown }>) {
     .map((origin) => ({
       value: origin,
       label: countryLabel(origin),
+      textValue: origin,
     }))
 }
 
